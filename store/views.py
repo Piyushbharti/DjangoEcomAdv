@@ -1,7 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
 from .models import Product
+from category.models import Category
 from .serializer import ProductSerializer
 # Create your views here.
 @api_view(['GET'])
@@ -39,3 +41,16 @@ def update_product(request, product_id):
         serializer.save()
         return Response({"status": 200, "message": "Product updated", "data": serializer.data})
     return Response({"status": 400, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def getProductByCat(request, slug):
+    try:
+        categories = get_object_or_404(Category, slug=slug)
+        products = Product.objects.filter(category=categories, is_available=True)
+        serializer = ProductSerializer(products, many=True)
+        
+        return Response({"status": 200, "message": "Product updated", "data": serializer.data})
+    except Product.DoesNotExist:
+        return Response({"status": 404, "message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+        
