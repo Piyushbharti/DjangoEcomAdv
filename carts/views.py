@@ -39,10 +39,37 @@ def add_cart(request, product_id):
             cart = cart,
         )
     return Response({
-        
         "status": 200,
         "message": "Product added to cart",
         "product": product.product_name,
         "quantity": cart_item.quantity
     }, status=status.HTTP_200_OK)
         
+        
+@api_view(['GET'])
+def cart(request):
+    total = 0
+    quantity = 0
+    cart_items = []
+    try:
+        cart = Cart.objects.get(cart_id = _cart_id(request))
+        items = CartItem.objects.filter(cart=cart, is_active = True)
+        for item in items:
+            total += item.product.price * item.quantity
+            quantity += item.quantity
+            cart_items.append({
+                "product_id": item.product.id,
+                "product_name": item.product.product_name,
+                "price": item.product.price,
+                "quantity": item.quantity,
+                "subtotal": item.product.price * item.quantity
+            })
+
+    except Cart.DoesNotExist:
+        pass
+    return Response({
+        "status": 200,
+        "total": total,
+        "quantity": quantity,
+        "cart_items": cart_items
+    }, status=status.HTTP_200_OK)
