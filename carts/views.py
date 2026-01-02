@@ -73,3 +73,36 @@ def cart(request):
         "quantity": quantity,
         "cart_items": cart_items
     }, status=status.HTTP_200_OK)
+    
+
+@api_view(['GET'])
+def remove_cart(request, product_id):
+    total = 0
+    quantity = 0
+    cart_items = []
+    cart = Cart.objects.get(cart_id = _cart_id(request))
+    product = get_object_or_404(Product, id = product_id)
+    cart_Item = CartItem.objects.filter(product=product, cart=cart)
+    print(product, cart_Item.quantity, "checkkro")
+    if cart_Item.quantity>1:
+        cart_Item.quantity-=1
+        cart_Item.save()
+    else:
+        cart_Item.delete()
+    for item in cart_Item:
+            total += item.product.price * item.quantity
+            quantity += item.quantity
+            cart_items.append({
+                "product_id": item.product.id,
+                "product_name": item.product.product_name,
+                "price": item.product.price,
+                "quantity": item.quantity,
+                "subtotal": item.product.price * item.quantity
+            })
+    return Response({
+        "status": 200,
+        "total": total,
+        "quantity": quantity,
+        "cart_items": cart_items
+    }, status=status.HTTP_200_OK)    
+    
