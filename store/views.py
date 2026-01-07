@@ -5,6 +5,9 @@ from django.shortcuts import get_object_or_404
 from .models import Product
 from category.models import Category
 from .serializer import ProductSerializer
+from django.core.paginator import Paginator
+from django.db.models import Q
+
 # Create your views here.
 @api_view(['GET'])
 def getAllProduct(request):
@@ -53,4 +56,45 @@ def getProductByCat(request, slug):
     except Product.DoesNotExist:
         return Response({"status": 404, "message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
     
-        
+@api_view(['GET'])
+def getAllProductByPagination(request):
+    slug = request.GET.get('category')
+
+    products = Product.objects.filter(is_available=True)
+
+    if slug:
+        category = get_object_or_404(Category, slug=slug)
+        products = products.filter(category=category)
+
+    paginator = Paginator(products, 3)
+    page = request.GET.get('page', 3)
+    paged_products = paginator.get_page(page)
+
+    serializer = ProductSerializer(paged_products, many=True)
+
+    return Response({
+        "status": 200,
+        "count": paginator.count,
+        "total_pages": paginator.num_pages,
+        "current_page": paged_products.number,
+        "data": serializer.data
+    })
+    
+@api_view(['GET'])
+def searchProduct(request):
+    keyword = request.GET.get('keyword')
+    products = Product.objects.none()
+    print(products.count(), "checkkkk")
+    if keyword:
+        products = Product.objects.filter(Q(product_name__icontains=keyword) | Q(category__category_name__icontains=keyword))
+    paginator = Paginator(products, 1)
+    page = request.GET.get('page',1)
+    paged_products = paginator.get_page(page)
+    serializer = ProductSerializer(paged_products, many=True)
+    return Response({
+        "status": 200,
+        "count": paginator.count,
+        "total_pages": paginator.num_pages,
+        "current_page": paged_products.number,
+        "data": serializer.data
+    })
