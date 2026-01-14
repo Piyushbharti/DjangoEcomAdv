@@ -84,7 +84,6 @@ def getAllProductByPagination(request):
 def searchProduct(request):
     keyword = request.GET.get('keyword')
     products = Product.objects.none()
-    print(products.count(), "checkkkk")
     if keyword:
         products = Product.objects.filter(Q(product_name__icontains=keyword) | Q(category__category_name__icontains=keyword))
     paginator = Paginator(products, 1)
