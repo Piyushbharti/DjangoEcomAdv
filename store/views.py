@@ -2,9 +2,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import Product
+from .models import Product, Variation
 from category.models import Category
-from .serializer import ProductSerializer
+from .serializer import ProductSerializer, ProductWithVariationsSerializer
 from django.core.paginator import Paginator
 from django.db.models import Q
 
@@ -97,3 +97,16 @@ def searchProduct(request):
         "current_page": paged_products.number,
         "data": serializer.data
     })
+
+@api_view(['GET'])
+def getSingleProductByCatV2(request, slug):
+
+    product = get_object_or_404(Product, slug=slug)
+    serializer = ProductWithVariationsSerializer(product)
+
+    return Response(
+        {"product": serializer.data},
+        status=200
+    )
+
+
