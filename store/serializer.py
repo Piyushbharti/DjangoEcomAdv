@@ -28,7 +28,20 @@ class ProductWithVariationsSerializer(serializers.ModelSerializer):
             product=obj,
             is_active=True
         )
-        return VariationSerializer(variations, many=True).data
+
+        variation_dict = {}
+
+        for variation in variations:
+            category = variation.variation_category
+            if category not in variation_dict:
+                variation_dict[category] = []
+
+            variation_dict[category].append(
+                VariationSerializer(variation).data
+            )
+
+        return variation_dict
+
 
 class VariationSerializer(serializers.ModelSerializer):
 
