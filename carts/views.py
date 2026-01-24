@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from store.models import Product
+from store.models import Product, Variation
 from .models import Cart, CartItem
 from django.shortcuts import get_object_or_404
 
@@ -19,30 +19,87 @@ def _cart_id(request):
 
 @api_view(['POST'])
 def add_cart(request, product_id):
+
+    # ---------- Get Product ----------
     product = get_object_or_404(Product, id=product_id)
-    try:
-        cart = Cart.objects.get(cart_id=_cart_id(request))
-    except Cart.DoesNotExist:
-        cart = Cart.objects.create(
-            cart_id = _cart_id(request)
-        )
-    cart.save()
+
+
+    # ---------- Get or Create Cart ----------
+    cart, created = Cart.objects.get_or_create(
+        cart_id=_cart_id(request)
+    )
+
+
+    # ---------- Get variations_id from request ----------
+    variation_ids = request.data.get('variations_id', [])
+
+    # Safety: ensure list of int
+    if isinstance(variation_ids, str):
+        import json
+        try:
+            variation_ids = json.loads(variation_ids)
+        except:
+            variation_ids = variation_ids.split(',')
+
+    variation_ids = list(map(int, variation_ids))
+
+
+    # ---------- Fetch Variations ----------
+    variations = Variation.objects.filter(
+        id__in=variation_ids,
+        product=product,
+        is_active=True
+    )
     
-    try:
-        cart_item = CartItem.objects.get(product = product, cart=cart)
-        cart_item.quantity+=1
-        cart_item.save()
-    except CartItem.DoesNotExist:
+
+    # ---------- Check Existing CartItem ----------
+    cart_items = CartItem.objects.filter(
+        product=product,
+        cart=cart
+    )
+
+    found = False
+
+    for item in cart_items:
+
+        existing_vars = set(item.variations.all())
+        new_vars = set(variations)
+
+        # Same product + same variations
+        if existing_vars == new_vars:
+            item.quantity += 1
+            item.save()
+            cart_item = item
+            found = True
+            break
+
+
+    # ---------- Create New CartItem ----------
+    if not found:
+
         cart_item = CartItem.objects.create(
-            product = product,
-            quantity = 1,
-            cart = cart,
+            product=product,
+            cart=cart,
+            quantity=1
         )
+
+        cart_item.variations.set(variations)
+        temp = CartItem.objects.all()
+        print(temp)
+
+    # ---------- Response ----------
     return Response({
         "status": 200,
         "message": "Product added to cart",
         "product": product.product_name,
-        "quantity": cart_item.quantity
+        "quantity": cart_item.quantity,
+        "variations": [
+            {
+                "id": v.id,
+                "category": v.variation_category,
+                "value": v.variation_value
+            } for v in cart_item.variations.all()
+        ]
     }, status=status.HTTP_200_OK)
         
         
