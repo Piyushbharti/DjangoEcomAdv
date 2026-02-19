@@ -1,8 +1,16 @@
 from rest_framework import serializers
-from .models import Category
+from store.models import Variation
+from store.serializer import ProductSerializer
 
-class CartSerializer(serializers.ModelSerializer):
+
+class VariationSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only = True)
     class Meta:
-        model = Category
-        fields = ['id', 'category_name']
+        model = Variation
+        fields = '__all__'
+        
 
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductSerializer
+        fields = '__all__'
