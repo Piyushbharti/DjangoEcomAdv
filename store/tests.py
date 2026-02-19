@@ -2,7 +2,7 @@ from django.test import TestCase
 
 # Create your tests here.
 def combinationSum2(arr, target):
-        ans = []
+        ans=[]
         arr.sort()
         def solve(curr, index, target):
             if target == 0:
@@ -18,5 +18,6 @@ def combinationSum2(arr, target):
                 curr.pop()
         solve([], 0, target)
         return ans
-
-print(combinationSum2([1,1,1,2], 2))
+candidates = [2,5,2,1,2]
+target = 5
+print(combinationSum2(candidates, target))

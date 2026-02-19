@@ -5,6 +5,7 @@ from rest_framework import status
 from store.models import Product, Variation
 from .models import Cart, CartItem
 from django.shortcuts import get_object_or_404
+from .serializer import VariationSerializer
 
 @api_view(['GET'])
 def temp(request):
@@ -16,24 +17,39 @@ def _cart_id(request):
     if not cart:
         cart = request.session.create()
     return cart
+def prepare_variations_data(variations_qs):
+
+    return [
+        {
+            "id": v.id,
+            "category": v.variation_category,
+            "value": v.variation_value,
+            "qty": 1
+        }
+        for v in variations_qs
+    ]
+
+@api_view(['GET'])
+def getAllVariation(request):
+    variation = Variation.objects.all()
+    res = VariationSerializer(variation, many=True)
+    return Response({
+        "data" : res.data
+    })
 
 @api_view(['POST'])
 def add_cart(request, product_id):
-
-    # ---------- Get Product ----------
+    print(request, "request")
     product = get_object_or_404(Product, id=product_id)
-
-
-    # ---------- Get or Create Cart ----------
-    cart, created = Cart.objects.get_or_create(
+    
+    cart, _ = Cart.objects.get_or_create(
         cart_id=_cart_id(request)
     )
 
 
-    # ---------- Get variations_id from request ----------
+    # ---------- Get variation ids ----------
     variation_ids = request.data.get('variations_id', [])
-
-    # Safety: ensure list of int
+    print(variation_ids, "variation_ids")
     if isinstance(variation_ids, str):
         import json
         try:
@@ -43,64 +59,84 @@ def add_cart(request, product_id):
 
     variation_ids = list(map(int, variation_ids))
 
-
-    # ---------- Fetch Variations ----------
+    # ---------- Fetch variations ----------
     variations = Variation.objects.filter(
         id__in=variation_ids,
-        product=product,
-        is_active=True
+        is_active=True,
+        product = product_id
     )
+    if not variations:
+        return Response({
+            "status" : 404,
+            "msg": "Product this this variation not found"
+        }, status=status.HTTP_200_OK)
+
+
+    # ---------- Get/Create CartItem ----------
+    cart_item, _ = CartItem.objects.get_or_create(
+        product=product,
+        cart=cart,
+        defaults={
+            "quantity": 0,
+            "variations": []
+        }
+    )
+
+
+    variations_data = cart_item.variations or []
+
+
+    # ---------- Convert to Dict (Fast Lookup) ----------
+    variation_map = {
+        int(v["id"]): v for v in variations_data
+    }
+
+
+    # ---------- Update / Insert ----------
+    for v in variations:
+
+        if v.id in variation_map:
+
+            # Already exists
+            variation_map[v.id]["qty"] += 1
+
+        else:
+
+            # New variation
+            variation_map[v.id] = {
+                "id": v.id,
+                "category": v.variation_category,
+                "value": v.variation_value,
+                "qty": 1
+            }
+
+
+    # ---------- Save ----------
+    cart_item.variations = list(variation_map.values())
+
+    cart_item.quantity = sum(
+        v["qty"] for v in cart_item.variations
+    )
+
+    cart_item.save()
     
-
-    # ---------- Check Existing CartItem ----------
-    cart_items = CartItem.objects.filter(
-        product=product,
-        cart=cart
-    )
-
-    found = False
-
-    for item in cart_items:
-
-        existing_vars = set(item.variations.all())
-        new_vars = set(variations)
-
-        # Same product + same variations
-        if existing_vars == new_vars:
-            item.quantity += 1
-            item.save()
-            cart_item = item
-            found = True
-            break
-
-
-    # ---------- Create New CartItem ----------
-    if not found:
-
-        cart_item = CartItem.objects.create(
-            product=product,
-            cart=cart,
-            quantity=1
-        )
-
-        cart_item.variations.set(variations)
-        temp = CartItem.objects.all()
-        print(temp)
 
     # ---------- Response ----------
     return Response({
+
         "status": 200,
         "message": "Product added to cart",
-        "product": product.product_name,
-        "quantity": cart_item.quantity,
-        "variations": [
-            {
-                "id": v.id,
-                "category": v.variation_category,
-                "value": v.variation_value
-            } for v in cart_item.variations.all()
-        ]
+
+        "data": {
+            "product": product.product_name,
+            "total_quantity": cart_item.quantity,
+            "variations": cart_item.variations
+        }
+
     }, status=status.HTTP_200_OK)
+
+
+
         
         
 @api_view(['GET'])
