@@ -1,183 +1,191 @@
-from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+
 from store.models import Product, Variation
 from .models import Cart, CartItem
-from django.shortcuts import get_object_or_404
 from .serializer import VariationSerializer
 
-@api_view(['GET'])
-def temp(request):
-    return Response({"status": 200, "message": "api running fine"}, status=status.HTTP_404_NOT_FOUND)
 
-
+# ============================================================
+#  HELPER: Get cart_id from X-Cart-Id header
+# ============================================================
 def _cart_id(request):
-    cart = request.session.session_key
-    if not cart:
-        cart = request.session.create()
-    return cart
-def prepare_variations_data(variations_qs):
-
-    return [
-        {
-            "id": v.id,
-            "category": v.variation_category,
-            "value": v.variation_value,
-            "qty": 1
-        }
-        for v in variations_qs
-    ]
-
-@api_view(['GET'])
-def getAllVariation(request):
-    variation = Variation.objects.all()
-    res = VariationSerializer(variation, many=True)
-    return Response({
-        "data" : res.data
-    })
-
-@api_view(['POST'])
-def add_cart(request, product_id):
-    print(request, "request")
-    product = get_object_or_404(Product, id=product_id)
-    
-    cart, _ = Cart.objects.get_or_create(
-        cart_id=_cart_id(request)
-    )
+    """
+    Frontend sends a unique cart ID in the X-Cart-Id header.
+    This ID is stored in localStorage — same browser = same ID always.
+    No more session cookie problems!
+    """
+    cart_id = request.headers.get('X-Cart-Id', '')
+    print(f"[CART ID] {cart_id}")
+    return cart_id
 
 
-    # ---------- Get variation ids ----------
-    variation_ids = request.data.get('variations_id', [])
-    print(variation_ids, "variation_ids")
-    if isinstance(variation_ids, str):
-        import json
-        try:
-            variation_ids = json.loads(variation_ids)
-        except:
-            variation_ids = variation_ids.split(',')
+# ============================================================
+#  HELPER: Build the full cart response
+# ============================================================
+def _build_cart_response(cart):
+    total = 0
+    quantity = 0
+    cart_items = []
 
-    variation_ids = list(map(int, variation_ids))
+    items = CartItem.objects.filter(cart=cart, is_active=True)
 
-    # ---------- Fetch variations ----------
-    variations = Variation.objects.filter(
-        id__in=variation_ids,
-        is_active=True,
-        product = product_id
-    )
-    if not variations:
-        return Response({
-            "status" : 404,
-            "msg": "Product this this variation not found"
-        }, status=status.HTTP_200_OK)
+    for item in items:
+        subtotal = item.product.price * item.quantity
+        total += subtotal
+        quantity += item.quantity
 
+        cart_items.append({
+            "product_id": item.product.id,
+            "product_name": item.product.product_name,
+            "price": item.product.price,
+            "quantity": item.quantity,
+            "subtotal": subtotal,
+            "variations": item.variations,
+        })
 
-    # ---------- Get/Create CartItem ----------
-    cart_item, _ = CartItem.objects.get_or_create(
-        product=product,
-        cart=cart,
-        defaults={
-            "quantity": 0,
-            "variations": []
-        }
-    )
-
-
-    variations_data = cart_item.variations or []
-
-
-    # ---------- Convert to Dict (Fast Lookup) ----------
-    variation_map = {
-        int(v["id"]): v for v in variations_data
+    return {
+        "status": 200,
+        "total": total,
+        "quantity": quantity,
+        "cart_items": cart_items,
     }
 
 
-    # ---------- Update / Insert ----------
-    for v in variations:
+# ============================================================
+#  HELPER: Parse variation IDs from request
+# ============================================================
+def _parse_variation_ids(raw_ids):
+    if not raw_ids:
+        return []
+    if isinstance(raw_ids, list):
+        return [int(i) for i in raw_ids]
+    if isinstance(raw_ids, str):
+        cleaned = raw_ids.strip("[] ")
+        if not cleaned:
+            return []
+        return [int(i) for i in cleaned.split(",")]
+    return []
 
+
+# ============================================================
+#  GET /cart/getAllVariation/
+# ============================================================
+@api_view(['GET'])
+def getAllVariation(request):
+    variations = Variation.objects.active()
+    serializer = VariationSerializer(variations, many=True)
+    return Response({"data": serializer.data})
+
+
+# ============================================================
+#  POST /cart/addProduct/<product_id>/
+# ============================================================
+@csrf_exempt
+@api_view(['POST'])
+def add_cart(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    cart_id = _cart_id(request)
+    if not cart_id:
+        return Response({"status": 400, "message": "Missing X-Cart-Id header"}, status=400)
+
+    cart, created = Cart.objects.get_or_create(cart_id=cart_id)
+    print(f"[ADD] Cart {'created' if created else 'found'}: {cart_id}")
+
+    # Parse variation IDs
+    raw_ids = request.data.get('variations_id', [])
+    variation_ids = _parse_variation_ids(raw_ids)
+    print(f"[ADD] Variation IDs: {variation_ids}")
+
+    if not variation_ids:
+        return Response({
+            "status": 400,
+            "message": "Please select at least one variation (color, size, etc.)"
+        }, status=400)
+
+    valid_variations = Variation.objects.filter(
+        id__in=variation_ids,
+        is_active=True,
+        product=product,
+    )
+
+    if not valid_variations.exists():
+        return Response({
+            "status": 404,
+            "message": "No valid variations found for this product"
+        }, status=404)
+
+    # Get or create CartItem
+    cart_item, _ = CartItem.objects.get_or_create(
+        product=product,
+        cart=cart,
+        defaults={"quantity": 0, "variations": []},
+    )
+
+    # Update variation quantities
+    variation_map = {int(v["id"]): v for v in (cart_item.variations or [])}
+
+    for v in valid_variations:
         if v.id in variation_map:
-
-            # Already exists
             variation_map[v.id]["qty"] += 1
-
         else:
-
-            # New variation
             variation_map[v.id] = {
                 "id": v.id,
                 "category": v.variation_category,
                 "value": v.variation_value,
-                "qty": 1
+                "qty": 1,
             }
 
-
-    # ---------- Save ----------
     cart_item.variations = list(variation_map.values())
-
-    cart_item.quantity = sum(
-        v["qty"] for v in cart_item.variations
-    )
-
+    cart_item.quantity = sum(v["qty"] for v in cart_item.variations)
     cart_item.save()
-    
+    print(f"[ADD] Saved — qty: {cart_item.quantity}")
 
-    # ---------- Response ----------
     return Response({
-
         "status": 200,
-        "message": "Product added to cart",
-
+        "message": f"{product.product_name} added to cart!",
         "data": {
             "product": product.product_name,
             "total_quantity": cart_item.quantity,
-            "variations": cart_item.variations
+            "variations": cart_item.variations,
         }
-
-    }, status=status.HTTP_200_OK)
-
+    })
 
 
-        
-        
+# ============================================================
+#  GET /cart/allCartItem/
+# ============================================================
 @api_view(['GET'])
 def cart(request):
-    total = 0
-    quantity = 0
-    cart_items = []
+    cart_id = _cart_id(request)
+    print(f"[CART] Looking for: {cart_id}")
+
     try:
-        cart = Cart.objects.get(cart_id = _cart_id(request))
-        items = CartItem.objects.filter(cart=cart, is_active = True)
-        for item in items:
-            total += item.product.price * item.quantity
-            quantity += item.quantity
-            cart_items.append({
-                "product_id": item.product.id,
-                "product_name": item.product.product_name,
-                "price": item.product.price,
-                "quantity": item.quantity,
-                "subtotal": item.product.price * item.quantity
-            })
-
+        user_cart = Cart.objects.get(cart_id=cart_id)
+        print(f"[CART] Found ✓")
+        return Response(_build_cart_response(user_cart))
     except Cart.DoesNotExist:
-        pass
-    return Response({
-        "status": 200,
-        "total": total,
-        "quantity": quantity,
-        "cart_items": cart_items
-    }, status=status.HTTP_200_OK)
-    
+        print(f"[CART] Not found — empty cart")
+        return Response({
+            "status": 200,
+            "total": 0,
+            "quantity": 0,
+            "cart_items": [],
+        })
 
+
+# ============================================================
+#  GET /cart/removeCartItem/<product_id>/
+# ============================================================
 @api_view(['GET'])
 def remove_cart(request, product_id):
-    total = 0
-    quantity = 0
-    cart_items = []
-
-    cart = Cart.objects.get(cart_id=_cart_id(request))
+    user_cart = Cart.objects.get(cart_id=_cart_id(request))
     product = get_object_or_404(Product, id=product_id)
-
-    cart_item = get_object_or_404(CartItem, product=product, cart=cart)
+    cart_item = get_object_or_404(CartItem, product=product, cart=user_cart)
 
     if cart_item.quantity > 1:
         cart_item.quantity -= 1
@@ -185,56 +193,24 @@ def remove_cart(request, product_id):
     else:
         cart_item.delete()
 
-    cart_items_qs = CartItem.objects.filter(cart=cart)
+    return Response(_build_cart_response(user_cart))
 
-    for item in cart_items_qs:
-        total += item.product.price * item.quantity
-        quantity += item.quantity
-        cart_items.append({
-            "product_id": item.product.id,
-            "product_name": item.product.product_name,
-            "price": item.product.price,
-            "quantity": item.quantity,
-            "subtotal": item.product.price * item.quantity
-        })
 
-    return Response({
-        "status": 200,
-        "total": total,
-        "quantity": quantity,
-        "cart_items": cart_items
-    }, status=status.HTTP_200_OK)
-    
+# ============================================================
+#  GET /cart/deleteCartItem/<product_id>/
+# ============================================================
 @api_view(['GET'])
 def delete_cart(request, product_id):
-    total = 0
-    quantity = 0
-    cart_items = []
-
-    cart = Cart.objects.get(cart_id=_cart_id(request))
+    user_cart = Cart.objects.get(cart_id=_cart_id(request))
     product = get_object_or_404(Product, id=product_id)
+    CartItem.objects.filter(cart=user_cart, product=product).delete()
+    return Response(_build_cart_response(user_cart))
 
-    CartItem.objects.filter(cart=cart, product=product).delete()
-    
 
-    cart_items_qs = CartItem.objects.filter(cart=cart)
-
-    for item in cart_items_qs:
-        total += item.product.price * item.quantity
-        quantity += item.quantity
-        cart_items.append({
-            "product_id": item.product.id,
-            "product_name": item.product.product_name,
-            "price": item.product.price,
-            "quantity": item.quantity,
-            "subtotal": item.product.price * item.quantity
-        })
-
-    return Response({
-        "status": 200,
-        "total": total,
-        "quantity": quantity,
-        "cart_items": cart_items
-    }, status=status.HTTP_200_OK)
-   
-    
+# ============================================================
+#  GET /cart/  (health check)
+# ============================================================
+@csrf_exempt
+@api_view(['GET'])
+def temp(request):
+    return Response({"status": 200, "message": "Cart API is running"})

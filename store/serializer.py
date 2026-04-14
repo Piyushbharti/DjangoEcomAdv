@@ -1,14 +1,25 @@
 from rest_framework import serializers
 from .models import Product, Variation
 
+
+class VariationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Variation
+        fields = ['id', 'variation_category', 'variation_value', 'is_active']
+
+
 class ProductSerializer(serializers.ModelSerializer):
-    category_slug = serializers.CharField(source = 'category.slug', read_only = True)
+    category_slug = serializers.CharField(source='category.slug', read_only=True)
+
     class Meta:
         model = Product
         fields = "__all__"
 
+
 class ProductWithVariationsSerializer(serializers.ModelSerializer):
     variations = serializers.SerializerMethodField()
+    category_name = serializers.CharField(source='category.category_name', read_only=True)
+    category_slug = serializers.CharField(source='category.slug', read_only=True)
 
     class Meta:
         model = Product
@@ -20,31 +31,24 @@ class ProductWithVariationsSerializer(serializers.ModelSerializer):
             'price',
             'image',
             'stock',
-            'variations'
+            'is_available',
+            'category',
+            'category_name',
+            'category_slug',
+            'variations',
         ]
 
     def get_variations(self, obj):
-        variations = Variation.objects.filter(
-            product=obj,
-            is_active=True
+        """Return variations grouped by category using the manager"""
+        active_variations = Variation.objects.filter(
+            product=obj, is_active=True
         )
 
-        variation_dict = {}
+        grouped = {}
+        for v in active_variations:
+            cat = v.variation_category
+            if cat not in grouped:
+                grouped[cat] = []
+            grouped[cat].append(VariationSerializer(v).data)
 
-        for variation in variations:
-            category = variation.variation_category
-            if category not in variation_dict:
-                variation_dict[category] = []
-
-            variation_dict[category].append(
-                VariationSerializer(variation).data
-            )
-
-        return variation_dict
-
-
-class VariationSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Variation
-        fields = "__all__"
+        return grouped
