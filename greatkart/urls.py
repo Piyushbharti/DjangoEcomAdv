@@ -18,10 +18,12 @@ from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
 from store import views
+from .views import temp_api_rate_limited
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('store/', include('store.urls')),
     path('category/', include('category.urls')),
-    path('cart/', include('carts.urls'))
+    path('cart/', include('carts.urls')),
+    path('temp-api-rate-limited/', temp_api_rate_limited, name='temp_api_rate_limited'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -43,9 +43,12 @@ INSTALLED_APPS = [
     'store',
     'rest_framework',
     'carts',
+    'corsheaders',
+    'wishlist'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -126,8 +129,27 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 
+
 # media files configuration
 
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'x-cart-id',
+    'authorization',
+    'accept',
+    'origin',
+]
+
+# Session cookie — browser cross-origin requests mein cookie bheje
+SESSION_COOKIE_SAMESITE = 'Lax'   # localhost pe Lax kaam karta hai
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 din tak session live rahe

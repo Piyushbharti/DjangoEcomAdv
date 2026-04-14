@@ -7,6 +7,7 @@ from category.models import Category
 from .serializer import ProductSerializer, ProductWithVariationsSerializer
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 @api_view(['GET'])
@@ -15,6 +16,7 @@ def getAllProduct(request):
     serializer = ProductSerializer(product, many=True)
     return Response({"status":200, "data": serializer.data})
 
+@csrf_exempt
 @api_view(['POST'])
 def postNewProduct(request):
     serializer = ProductSerializer(data=request.data)
@@ -32,6 +34,7 @@ def postNewProduct(request):
         }
     )
     
+@csrf_exempt
 @api_view(['PATCH'])
 def update_product(request, product_id):
     try:
