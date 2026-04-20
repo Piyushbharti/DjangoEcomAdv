@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trash2, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import axiosInstance from '../api/axios';
+import axiosInstance, { API_BASE_URL } from '../api/axios';
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -16,12 +16,10 @@ const Wishlist = () => {
   const fetchWishlist = async () => {
     try {
       setLoading(true);
-      // TODO: Implement backend endpoint: GET /wishlist/
-      // const response = await axiosInstance.get('/wishlist/');
-      // setWishlistItems(response.data.items || []);
-      
-      // Mock data for now
-      setWishlistItems([]);
+      const response = await axiosInstance.get('/wishlist/all/');
+      if (response.data.status === 200) {
+        setWishlistItems(response.data.data || []);
+      }
     } catch (error) {
       console.error('Error fetching wishlist:', error);
     } finally {
@@ -29,9 +27,16 @@ const Wishlist = () => {
     }
   };
 
-  const handleRemove = async (itemId) => {
-    // TODO: Implement backend endpoint: DELETE /wishlist/{id}/
-    setWishlistItems(prev => prev.filter(item => item.id !== itemId));
+  const handleRemove = async (productId) => {
+    try {
+      const response = await axiosInstance.delete(`/wishlist/remove/${productId}/`);
+      if (response.data.status === 200) {
+        // Remove from local state
+        setWishlistItems(prev => prev.filter(item => item.product_id !== productId));
+      }
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+    }
   };
 
   const handleAddToCart = async (productId) => {
@@ -61,13 +66,13 @@ const Wishlist = () => {
             {wishlistItems.map(item => (
               <div key={item.id} className="wishlist-item">
                 <Link to={`/product/${item.slug}`}>
-                  <img src={item.image} alt={item.name} />
+                  <img src={`${API_BASE_URL}${item.image}`} alt={item.product_name} />
                 </Link>
                 <div className="item-info">
                   <Link to={`/product/${item.slug}`}>
-                    <h3>{item.name}</h3>
+                    <h3>{item.product_name}</h3>
                   </Link>
-                  <p className="price">${item.price}</p>
+                  <p className="price">₹{item.price}</p>
                   {item.in_stock ? (
                     <p className="in-stock">In Stock</p>
                   ) : (
@@ -85,7 +90,7 @@ const Wishlist = () => {
                   </button>
                   <button 
                     className="btn-remove"
-                    onClick={() => handleRemove(item.id)}
+                    onClick={() => handleRemove(item.product_id)}
                   >
                     <Trash2 size={18} />
                   </button>

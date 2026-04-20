@@ -25,5 +25,6 @@ urlpatterns = [
     path('store/', include('store.urls')),
     path('category/', include('category.urls')),
     path('cart/', include('carts.urls')),
+    path('wishlist/', include('wishlist.urls')),
     path('temp-api-rate-limited/', temp_api_rate_limited, name='temp_api_rate_limited'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
