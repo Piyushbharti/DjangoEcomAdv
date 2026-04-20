@@ -153,3 +153,9 @@ CORS_ALLOW_HEADERS = [
 SESSION_COOKIE_SAMESITE = 'Lax'   # localhost pe Lax kaam karta hai
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 din tak session live rahe
+
+# REST Framework settings - CSRF exempt for API calls
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+}

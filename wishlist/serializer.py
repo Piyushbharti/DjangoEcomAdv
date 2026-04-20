@@ -28,3 +28,5 @@ class WhishlistSerializer(serializers.ModelSerializer):
 
     def get_in_stock(self, obj):
         return obj.product.stock > 0 and obj.product.is_available
+
+

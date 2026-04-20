@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Heart, Star, ShoppingCart } from 'lucide-react';
-import { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { API_BASE_URL } from '../api/axios';
 
 const ProductCard = ({ product }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart, loading } = useCart();
+  const { isInWishlist, addToWishlist } = useWishlist();
+  
+  // Check if product is already in wishlist
+  const isWishlisted = isInWishlist(product.id);
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -16,10 +19,15 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const handleWishlist = (e) => {
+  // Wishlist API call
+  const handleWishlist = async (e) => {
     e.preventDefault();
-    setIsWishlisted(!isWishlisted);
-    // TODO: Implement wishlist API call
+    const result = await addToWishlist(product.id);
+    if (result.success) {
+      alert(result.message);
+    } else {
+      alert(result.message || 'Failed to add to wishlist');
+    }
   };
 
   // Calculate discount percentage if needed

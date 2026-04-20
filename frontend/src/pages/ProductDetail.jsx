@@ -12,8 +12,9 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart } = useCart();
-  console.log(groupedVariations, "groupedVariations",selectedVariations)
+
   useEffect(() => {
     fetchProduct();
   }, [slug]);
@@ -25,7 +26,6 @@ const ProductDetail = () => {
       if (response.data.product) {
         const p = response.data.product;
         setProduct(p);
-        // API returns variations as { "color": [...], "size": [...] }
         setGroupedVariations(p.variations || {});
       }
     } catch (error) {
@@ -36,19 +36,14 @@ const ProductDetail = () => {
   };
 
   const handleVariationSelect = (category, variationId) => {
-    // variationId ko Number mein convert karo — type mismatch avoid karne ke liye
     setSelectedVariations(prev => ({
       ...prev,
       [category]: Number(variationId)
     }));
-    console.log("Selected:", category, "→ ID:", variationId);
   };
 
   const handleAddToCart = async () => {
-    // selectedVariations = { "color": 3, "size": 7 }
-    // Object.values() = [3, 7]  ← ye IDs backend ko jaayengi
     const variationIds = Object.values(selectedVariations);
-    console.log("Sending variation IDs to backend:", variationIds);
 
     if (variationIds.length === 0) {
       alert("Please select a variation (color, size, etc.) first!");
@@ -60,6 +55,21 @@ const ProductDetail = () => {
       alert(result.message);
     } else {
       alert(result.message || "Failed to add to cart");
+    }
+  };
+
+  const handleAddToWishlist = async () => {
+    try {
+      const response = await axiosInstance.post(`/wishlist/addToWishlist/${product.id}/`);
+      if (response.data.status === 200 || response.data.status === 201) {
+        setIsWishlisted(true);
+        alert(response.data.message || 'Added to wishlist!');
+      } else {
+        alert(response.data.message || 'Failed to add to wishlist');
+      }
+    } catch (error) {
+      console.error('Error adding to wishlist:', error);
+      alert('Failed to add to wishlist');
     }
   };
 
@@ -147,7 +157,7 @@ const ProductDetail = () => {
               <p>{product.description}</p>
             </div>
 
-            {/* Variations — reads the grouped dict from API */}
+            {/* Variations */}
             {hasVariations && (
               <div className="variations-section">
                 {Object.entries(groupedVariations).map(([category, vars]) => (
@@ -192,9 +202,7 @@ const ProductDetail = () => {
                 Add to Cart
               </button>
               <button className="btn-buy-now">Buy Now</button>
-              <button className="btn-wishlist">
-                <Heart size={20} />
-              </button>
+              
               <button className="btn-share">
                 <Share2 size={20} />
               </button>
