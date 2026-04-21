@@ -31,3 +31,13 @@ def allWishListData(request):
     data = WhishList.objects.filter(cart_id = cart_id)
     serialize = WhishlistSerializer(data, many=True)
     return Response({'data': serialize.data})
+
+@csrf_exempt
+@api_view(['POST'])
+def deleteWishListData(request, product_id):
+    cart_id = request.headers.get('X-Cart-Id', '')
+    data = get_object_or_404(WhishList, cart_id = cart_id, product_id = product_id)
+    data.delete()
+    remaning = WhishList.objects.filter(cart_id = cart_id)
+    serialize = WhishlistSerializer(remaning, many=True)
+    return Response({'data': serialize.data})

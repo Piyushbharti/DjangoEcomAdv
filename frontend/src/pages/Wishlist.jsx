@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Trash2, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import axiosInstance, { API_BASE_URL } from '../api/axios';
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const { removeFromWishlist } = useWishlist();
 
   useEffect(() => {
     fetchWishlist();
@@ -17,9 +19,7 @@ const Wishlist = () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get('/wishlist/all/');
-      if (response.data.status === 200) {
-        setWishlistItems(response.data.data || []);
-      }
+      setWishlistItems(response.data.data || []);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
     } finally {
@@ -28,14 +28,10 @@ const Wishlist = () => {
   };
 
   const handleRemove = async (productId) => {
-    try {
-      const response = await axiosInstance.delete(`/wishlist/remove/${productId}/`);
-      if (response.data.status === 200) {
-        // Remove from local state
-        setWishlistItems(prev => prev.filter(item => item.product_id !== productId));
-      }
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
+    const result = await removeFromWishlist(productId);
+    if (result.success) {
+      // Local state se bhi remove karo
+      setWishlistItems(prev => prev.filter(item => item.product_id !== productId));
     }
   };
 
