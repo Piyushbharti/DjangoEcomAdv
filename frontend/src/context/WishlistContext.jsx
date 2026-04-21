@@ -70,6 +70,18 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
+  // Poori wishlist clear karo
+  const clearWishlist = async () => {
+    try {
+      const response = await axiosInstance.get('/wishlist/dropWishList');
+      setWishlistIds([]);
+      return { success: true, message: response.data.message || 'Wishlist cleared!' };
+    } catch (error) {
+      console.error('Error clearing wishlist:', error);
+      return { success: false, message: 'Failed to clear wishlist' };
+    }
+  };
+
   return (
     <WishlistContext.Provider value={{
       wishlistIds,
@@ -77,6 +89,7 @@ export const WishlistProvider = ({ children }) => {
       isInWishlist,
       addToWishlist,
       removeFromWishlist,
+      clearWishlist,
       fetchAllWishlistData
     }}>
       {children}

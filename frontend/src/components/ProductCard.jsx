@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Heart, Star, ShoppingCart } from 'lucide-react';
+import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { API_BASE_URL } from '../api/axios';
@@ -7,6 +8,7 @@ import { API_BASE_URL } from '../api/axios';
 const ProductCard = ({ product }) => {
   const { addToCart, loading } = useCart();
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const [animating, setAnimating] = useState(false);
   
   // Check if product is already in wishlist
   const isWishlisted = isInWishlist(product.id);
@@ -19,22 +21,18 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Wishlist toggle - filled hai toh remove, empty hai toh add
+  // Wishlist toggle with animation
   const handleWishlist = async (e) => {
     e.preventDefault();
     
+    // Animation trigger
+    setAnimating(true);
+    setTimeout(() => setAnimating(false), 400);
+    
     if (isWishlisted) {
-      // Already wishlist mein hai → remove karo
-      const result = await removeFromWishlist(product.id);
-      if (result.success) {
-        alert(result.message);
-      }
+      await removeFromWishlist(product.id);
     } else {
-      // Wishlist mein nahi hai → add karo
-      const result = await addToWishlist(product.id);
-      if (result.success) {
-        alert(result.message);
-      }
+      await addToWishlist(product.id);
     }
   };
 
@@ -56,7 +54,7 @@ const ProductCard = ({ product }) => {
             <span className="discount-badge">-{discountPercent}%</span>
           )}
           <button 
-            className={`wishlist-btn ${isWishlisted ? 'active' : ''}`}
+            className={`wishlist-btn ${isWishlisted ? 'active' : ''} ${animating ? 'heart-pop' : ''}`}
             onClick={handleWishlist}
           >
             <Heart size={20} fill={isWishlisted ? 'currentColor' : 'none'} />
