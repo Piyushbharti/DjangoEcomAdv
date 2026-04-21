@@ -249,14 +249,150 @@ const ProductDetail = () => {
         {/* Reviews Section */}
         <section className="reviews-section">
           <h2>Customer Reviews</h2>
+          
+          {/* Rating Summary */}
           <div className="reviews-summary">
-            <div className="rating-breakdown">
-              <h3>{product.rating || 4.0} out of 5</h3>
-              <p>{product.review_count || 0} global ratings</p>
+            <div className="rating-overview">
+              <div className="rating-big">
+                <span className="rating-number">4.2</span>
+                <div className="rating-stars-big">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={18} fill={i < 4 ? '#FFA41C' : 'none'} stroke={i < 4 ? '#FFA41C' : '#ccc'} />
+                  ))}
+                </div>
+                <span className="rating-total">Based on 24 reviews</span>
+              </div>
+              
+              {/* Rating Bars */}
+              <div className="rating-bars">
+                {[
+                  { stars: 5, percent: 60, count: 14 },
+                  { stars: 4, percent: 25, count: 6 },
+                  { stars: 3, percent: 8, count: 2 },
+                  { stars: 2, percent: 4, count: 1 },
+                  { stars: 1, percent: 3, count: 1 },
+                ].map(bar => (
+                  <div key={bar.stars} className="rating-bar-row">
+                    <span className="bar-label">{bar.stars} star</span>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${bar.percent}%` }}></div>
+                    </div>
+                    <span className="bar-count">{bar.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+
+          {/* Write Review Form */}
+          <div className="write-review">
+            <h3>Write a Review</h3>
+            <form onSubmit={(e) => { e.preventDefault(); alert('Backend not connected yet!'); }}>
+              
+              {/* Name */}
+              <div className="review-field">
+                <label>Your Name</label>
+                <input type="text" placeholder="Enter your name" required />
+              </div>
+
+              {/* Email */}
+              <div className="review-field">
+                <label>Email</label>
+                <input type="email" placeholder="Enter your email" required />
+              </div>
+
+              {/* Star Rating */}
+              <div className="review-field">
+                <label>Rating</label>
+                <div className="star-input">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star
+                      key={star}
+                      size={28}
+                      className="star-clickable"
+                      fill="none"
+                      stroke="#FFA41C"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Review Title */}
+              <div className="review-field">
+                <label>Review Title</label>
+                <input type="text" placeholder="Give your review a title" required />
+              </div>
+
+              {/* Review Body */}
+              <div className="review-field">
+                <label>Your Review</label>
+                <textarea rows="4" placeholder="Write your review here..." required></textarea>
+              </div>
+
+              {/* Image Upload */}
+              <div className="review-field">
+                <label>Add Photos (optional)</label>
+                <input type="file" accept="image/*" multiple />
+              </div>
+
+              <button type="submit" className="btn-submit-review">Submit Review</button>
+            </form>
+          </div>
+
+          {/* Dummy Reviews List */}
           <div className="reviews-list">
-            <p>Reviews will be displayed here once implemented in backend</p>
+            {[
+              {
+                id: 1,
+                name: 'Rahul S.',
+                rating: 5,
+                title: 'Amazing product!',
+                comment: 'Quality is great, fits perfectly. Delivery was on time. Highly recommended!',
+                date: '15 Apr 2026',
+                helpful: 12,
+              },
+              {
+                id: 2,
+                name: 'Priya M.',
+                rating: 4,
+                title: 'Good but could be better',
+                comment: 'Product is nice, material is good. But the color was slightly different from the image. Overall satisfied.',
+                date: '10 Apr 2026',
+                helpful: 5,
+              },
+              {
+                id: 3,
+                name: 'Amit K.',
+                rating: 3,
+                title: 'Average quality',
+                comment: 'Expected better for this price. Stitching could be improved. Packaging was good though.',
+                date: '5 Apr 2026',
+                helpful: 3,
+              },
+            ].map(review => (
+              <div key={review.id} className="review-card">
+                <div className="review-header">
+                  <div className="reviewer-info">
+                    <div className="reviewer-avatar">{review.name.charAt(0)}</div>
+                    <div>
+                      <strong>{review.name}</strong>
+                      <span className="review-date">{review.date}</span>
+                    </div>
+                  </div>
+                  <div className="review-stars">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={14} fill={i < review.rating ? '#FFA41C' : 'none'} stroke={i < review.rating ? '#FFA41C' : '#ccc'} />
+                    ))}
+                  </div>
+                </div>
+                <h4 className="review-title">{review.title}</h4>
+                <p className="review-comment">{review.comment}</p>
+                <div className="review-footer">
+                  <button className="btn-helpful">👍 Helpful ({review.helpful})</button>
+                  <button className="btn-report">Report</button>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </div>

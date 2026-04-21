@@ -41,3 +41,11 @@ def deleteWishListData(request, product_id):
     remaning = WhishList.objects.filter(cart_id = cart_id)
     serialize = WhishlistSerializer(remaning, many=True)
     return Response({'data': serialize.data})
+
+@csrf_exempt
+@api_view(['GET'])
+def delAllWishListData(request):
+    cart_id = request.headers.get('X-Cart-Id', '')
+    data = WhishList.objects.filter(cart_id = cart_id)
+    data.delete()
+    return Response({'data': [], 'message': 'All WishList Removed'})

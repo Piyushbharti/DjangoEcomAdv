@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { ToastProvider } from './components/Toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -18,8 +19,9 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
+      <ToastProvider>
+        <CartProvider>
+          <WishlistProvider>
           <div className="app">
             <Header />
             <main className="main-content">
@@ -41,7 +43,8 @@ function App() {
             <Footer />
           </div>
         </WishlistProvider>
-      </CartProvider>
+        </CartProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

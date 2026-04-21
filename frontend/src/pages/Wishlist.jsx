@@ -3,13 +3,16 @@ import { Trash2, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useToast } from '../components/Toast';
 import axiosInstance, { API_BASE_URL } from '../api/axios';
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
   const { addToCart } = useCart();
-  const { removeFromWishlist } = useWishlist();
+  const { removeFromWishlist, clearWishlist } = useWishlist();
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchWishlist();
@@ -30,15 +33,29 @@ const Wishlist = () => {
   const handleRemove = async (productId) => {
     const result = await removeFromWishlist(productId);
     if (result.success) {
-      // Local state se bhi remove karo
       setWishlistItems(prev => prev.filter(item => item.product_id !== productId));
+    }
+  };
+
+  const handleClearAll = async () => {
+    setShowConfirm(true);
+  };
+
+  const confirmClearAll = async () => {
+    setShowConfirm(false);
+    const result = await clearWishlist();
+    if (result.success) {
+      setWishlistItems([]);
+      showToast('Wishlist cleared!', 'success');
+    } else {
+      showToast('Failed to clear wishlist', 'error');
     }
   };
 
   const handleAddToCart = async (productId) => {
     const result = await addToCart(productId);
     if (result.success) {
-      alert('Added to cart!');
+      showToast('Added to cart!', 'success');
     }
   };
 
@@ -50,6 +67,13 @@ const Wishlist = () => {
     <div className="wishlist-page">
       <div className="container">
         <h1>My Wishlist</h1>
+
+        {wishlistItems.length > 0 && (
+          <button className="btn-clear-wishlist" onClick={handleClearAll}>
+            <Trash2 size={16} />
+            Clear All
+          </button>
+        )}
 
         {wishlistItems.length === 0 ? (
           <div className="empty-wishlist">
@@ -96,6 +120,20 @@ const Wishlist = () => {
           </div>
         )}
       </div>
+
+      {/* Confirm Popup */}
+      {showConfirm && (
+        <div className="confirm-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="confirm-popup" onClick={(e) => e.stopPropagation()}>
+            <h3>Clear Wishlist?</h3>
+            <p>All items will be removed. This action cannot be undone.</p>
+            <div className="confirm-actions">
+              <button className="btn-cancel" onClick={() => setShowConfirm(false)}>Cancel</button>
+              <button className="btn-confirm-delete" onClick={confirmClearAll}>Clear All</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
