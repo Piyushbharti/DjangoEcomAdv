@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../api/axios';
 
 const ProductCard = ({ product }) => {
   const { addToCart, loading } = useCart();
-  const { isInWishlist, addToWishlist } = useWishlist();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   
   // Check if product is already in wishlist
   const isWishlisted = isInWishlist(product.id);
@@ -19,14 +19,22 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Wishlist API call
+  // Wishlist toggle - filled hai toh remove, empty hai toh add
   const handleWishlist = async (e) => {
     e.preventDefault();
-    const result = await addToWishlist(product.id);
-    if (result.success) {
-      alert(result.message);
+    
+    if (isWishlisted) {
+      // Already wishlist mein hai → remove karo
+      const result = await removeFromWishlist(product.id);
+      if (result.success) {
+        alert(result.message);
+      }
     } else {
-      alert(result.message || 'Failed to add to wishlist');
+      // Wishlist mein nahi hai → add karo
+      const result = await addToWishlist(product.id);
+      if (result.success) {
+        alert(result.message);
+      }
     }
   };
 

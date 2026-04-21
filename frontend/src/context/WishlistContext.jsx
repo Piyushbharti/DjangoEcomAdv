@@ -57,16 +57,15 @@ export const WishlistProvider = ({ children }) => {
   // Wishlist se remove karo
   const removeFromWishlist = async (productId) => {
     try {
-      const response = await axiosInstance.delete(`/wishlist/remove/${productId}/`);
+      console.log('Deleting wishlist item, product_id:', productId);
+      const response = await axiosInstance.post(`/wishlist/deleteWishlist/${productId}/`);
       
-      if (response.data.status === 200) {
-        // Local state se remove karo
-        setWishlistIds(prev => prev.filter(id => id !== productId));
-        return { success: true, message: response.data.message };
-      }
-      return { success: false, message: response.data.message };
+      // Local state se remove karo
+      setWishlistIds(prev => prev.filter(id => id !== productId));
+      return { success: true, message: response.data.message || 'Removed!' };
     } catch (error) {
       console.error('Error removing from wishlist:', error);
+      console.error('Response:', error.response?.data);
       return { success: false, message: 'Failed to remove from wishlist' };
     }
   };
