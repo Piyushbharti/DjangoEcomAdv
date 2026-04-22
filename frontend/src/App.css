@@ -1637,3 +1637,10 @@ img { max-width: 100%; height: auto; display: block; }
   .rating-overview { flex-direction: column; gap: 20px; }
   .rating-bars { max-width: 100%; }
 }
+
+.rating-label {
+  font-size: 14px;
+  color: var(--orange);
+  font-weight: 600;
+  margin-left: 8px;
+}
