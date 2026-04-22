@@ -15,8 +15,18 @@ const ProductDetail = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart } = useCart();
 
+  // Review form state
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewImage, setReviewImage] = useState(null);
+  const [reviews, setReviews] = useState([]);
+
   useEffect(() => {
     fetchProduct();
+    fetchReviews();
   }, [slug]);
 
   const fetchProduct = async () => {
@@ -32,6 +42,18 @@ const ProductDetail = () => {
       console.error('Error fetching product:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch all reviews
+  const fetchReviews = async () => {
+    try {
+      const response = await axiosInstance.get('/review/getAllReview/');
+      if (response.data.status === 200) {
+        setReviews(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
     }
   };
 
@@ -70,6 +92,48 @@ const ProductDetail = () => {
     } catch (error) {
       console.error('Error adding to wishlist:', error);
       alert('Failed to add to wishlist');
+    }
+  };
+
+  // Submit review API call
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+
+    if (reviewRating === 0) {
+      alert('Please select a rating!');
+      return;
+    }
+
+    setReviewSubmitting(true);
+    try {
+      // FormData use karo - image ke liye zaruri hai
+      const formData = new FormData();
+      formData.append('rating', reviewRating);
+      formData.append('title', reviewTitle);
+      formData.append('comment', reviewComment);
+      if (reviewImage) {
+        formData.append('image', reviewImage);
+      }
+
+      const response = await axiosInstance.post(`/review/addReview/${product.id}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.status === 201) {
+        // Reset form
+        setReviewRating(0);
+        setReviewTitle('');
+        setReviewComment('');
+        setReviewImage(null);
+        alert(response.data.message || 'Review submitted!');
+        // Refresh reviews
+        fetchReviews();
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Failed to submit review. Backend not connected yet.');
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -287,21 +351,9 @@ const ProductDetail = () => {
           {/* Write Review Form */}
           <div className="write-review">
             <h3>Write a Review</h3>
-            <form onSubmit={(e) => { e.preventDefault(); alert('Backend not connected yet!'); }}>
-              
-              {/* Name */}
-              <div className="review-field">
-                <label>Your Name</label>
-                <input type="text" placeholder="Enter your name" required />
-              </div>
+            <form onSubmit={handleSubmitReview}>
 
-              {/* Email */}
-              <div className="review-field">
-                <label>Email</label>
-                <input type="email" placeholder="Enter your email" required />
-              </div>
-
-              {/* Star Rating */}
+              {/* Star Rating - Clickable */}
               <div className="review-field">
                 <label>Rating</label>
                 <div className="star-input">
@@ -310,89 +362,83 @@ const ProductDetail = () => {
                       key={star}
                       size={28}
                       className="star-clickable"
-                      fill="none"
+                      fill={star <= (reviewHover || reviewRating) ? '#FFA41C' : 'none'}
                       stroke="#FFA41C"
+                      onClick={() => setReviewRating(star)}
+                      onMouseEnter={() => setReviewHover(star)}
+                      onMouseLeave={() => setReviewHover(0)}
                     />
                   ))}
+                  {reviewRating > 0 && <span className="rating-label">{reviewRating}/5</span>}
                 </div>
               </div>
 
               {/* Review Title */}
               <div className="review-field">
                 <label>Review Title</label>
-                <input type="text" placeholder="Give your review a title" required />
+                <input 
+                  type="text" 
+                  placeholder="Give your review a title" 
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  required 
+                />
               </div>
 
               {/* Review Body */}
               <div className="review-field">
                 <label>Your Review</label>
-                <textarea rows="4" placeholder="Write your review here..." required></textarea>
+                <textarea 
+                  rows="4" 
+                  placeholder="Write your review here..." 
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  required
+                ></textarea>
               </div>
 
               {/* Image Upload */}
               <div className="review-field">
                 <label>Add Photos (optional)</label>
-                <input type="file" accept="image/*" multiple />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => setReviewImage(e.target.files[0])}
+                />
               </div>
 
-              <button type="submit" className="btn-submit-review">Submit Review</button>
+              <button type="submit" className="btn-submit-review" disabled={reviewSubmitting}>
+                {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+              </button>
             </form>
           </div>
 
-          {/* Dummy Reviews List */}
+          {/* Reviews List */}
           <div className="reviews-list">
-            {[
-              {
-                id: 1,
-                name: 'Rahul S.',
-                rating: 5,
-                title: 'Amazing product!',
-                comment: 'Quality is great, fits perfectly. Delivery was on time. Highly recommended!',
-                date: '15 Apr 2026',
-                helpful: 12,
-              },
-              {
-                id: 2,
-                name: 'Priya M.',
-                rating: 4,
-                title: 'Good but could be better',
-                comment: 'Product is nice, material is good. But the color was slightly different from the image. Overall satisfied.',
-                date: '10 Apr 2026',
-                helpful: 5,
-              },
-              {
-                id: 3,
-                name: 'Amit K.',
-                rating: 3,
-                title: 'Average quality',
-                comment: 'Expected better for this price. Stitching could be improved. Packaging was good though.',
-                date: '5 Apr 2026',
-                helpful: 3,
-              },
-            ].map(review => (
-              <div key={review.id} className="review-card">
-                <div className="review-header">
-                  <div className="reviewer-info">
-                    <div className="reviewer-avatar">{review.name.charAt(0)}</div>
-                    <div>
-                      <strong>{review.name}</strong>
-                      <span className="review-date">{review.date}</span>
+            {reviews.length === 0 ? (
+              <p style={{color: '#999', textAlign: 'center', padding: '20px'}}>No reviews yet. Be the first to review!</p>
+            ) : (
+              reviews.map(review => (
+                <div key={review.id} className="review-card">
+                  <div className="review-header">
+                    <div className="reviewer-info">
+                      <div className="reviewer-avatar">U</div>
+                      <div>
+                        <strong>User</strong>
+                        <span className="review-date">{new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+                    <div className="review-stars">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={14} fill={i < review.rating ? '#FFA41C' : 'none'} stroke={i < review.rating ? '#FFA41C' : '#ccc'} />
+                      ))}
                     </div>
                   </div>
-                  <div className="review-stars">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill={i < review.rating ? '#FFA41C' : 'none'} stroke={i < review.rating ? '#FFA41C' : '#ccc'} />
-                    ))}
-                  </div>
+                  <h4 className="review-title">{review.title}</h4>
+                  <p className="review-comment">{review.comment}</p>
                 </div>
-                <h4 className="review-title">{review.title}</h4>
-                <p className="review-comment">{review.comment}</p>
-                <div className="review-footer">
-                  <button className="btn-helpful">👍 Helpful ({review.helpful})</button>
-                  <button className="btn-report">Report</button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
       </div>
