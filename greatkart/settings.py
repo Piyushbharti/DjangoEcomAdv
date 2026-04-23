@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 """
 Django settings for greatkart project.
 
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'wishlist',
     'review',
+    'user',
 ]
 
 MIDDLEWARE = [
@@ -156,7 +158,13 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 din tak session live rahe
 
 # REST Framework settings - CSRF exempt for API calls
+# REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': [],
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
