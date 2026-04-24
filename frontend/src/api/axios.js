@@ -21,9 +21,16 @@ const axiosInstance = axios.create({
   },
 });
 
-// Attach cart_id header to EVERY request automatically
+// Attach cart_id + auth token to EVERY request automatically
 axiosInstance.interceptors.request.use((config) => {
   config.headers['X-Cart-Id'] = getCartId();
+  
+  // Agar user logged in hai toh access token bhi bhejo
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return config;
 });
 

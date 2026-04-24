@@ -5,7 +5,7 @@ from .models import Account
 # Register ke liye - frontend se data aayega, user banayega
 class RegisterSerializer(serializers.ModelSerializer):
     # Password sirf input mein, response mein nahi dikhega
-    password = serializers.CharField(write_only=True)
+    # password = serializers.CharField(write_only=True)
 
     class Meta:
         model = Account
@@ -31,3 +31,8 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ['id', 'first_name', 'last_name', 'username', 'email', 'phone_number']
+
+class LoginSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['first_name', 'last_name', 'username', 'email', 'phone_number', 'password']

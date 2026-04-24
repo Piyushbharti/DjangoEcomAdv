@@ -6,6 +6,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
+    username: '',
     email: '',
     phone_number: '',
     password: '',
@@ -42,6 +43,7 @@ const Register = () => {
     const result = await register({
       first_name: formData.first_name,
       last_name: formData.last_name,
+      username: formData.username,
       email: formData.email,
       phone_number: formData.phone_number,
       password: formData.password,
@@ -90,6 +92,20 @@ const Register = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                minLength={3}
+              />
+              <small>At least 3 characters, must be unique</small>
             </div>
 
             <div className="form-group">
