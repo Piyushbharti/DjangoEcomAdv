@@ -1,7 +1,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializer import RegisterSerializer, AccountSerializer
+from django.contrib.auth import authenticate
+from .serializer import RegisterSerializer, AccountSerializer, LoginSerializer
 
 
 # ============================================
@@ -55,3 +56,49 @@ def register(request):
         'status': 400,
         'errors': serializer.errors
     })
+
+
+@api_view(['POST'])
+def login(request):
+    """
+    User login — email + password se tokens milenge.
+    
+    Frontend bhejega:
+    {
+        "email": "rahul@gmail.com",
+        "password": "mypassword"
+    }
+    """
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not email or not password:
+        return Response({
+            'status': 400,
+            'message': 'Email and password are required.'
+        })
+    
+    # authenticate() internally:
+    # 1. Email se user dhundho
+    # 2. Password hash match karo
+    # 3. Sahi → user return, galat → None
+    user = authenticate(email=email, password=password)
+    
+    if user is not None:
+        # Tokens generate karo
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'status': 200,
+            'message': 'Login successful!',
+            'user': AccountSerializer(user).data,
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        })
+    else:
+        return Response({
+            'status': 401,
+            'message': 'Invalid email or password.'
+        })
