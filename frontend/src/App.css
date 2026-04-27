@@ -1644,3 +1644,59 @@ img { max-width: 100%; height: auto; display: block; }
   font-weight: 600;
   margin-left: 8px;
 }
+
+/* ===== PROFILE PAGE ===== */
+.profile-page { padding: 40px 0; }
+.profile-page h1 { font-size: 28px; margin-bottom: 24px; }
+.profile-card {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  border: 1px solid #e0e0e0;
+  padding: 32px;
+  max-width: 600px;
+}
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+.profile-info { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; }
+.profile-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--text-light);
+}
+.profile-field label {
+  font-size: 12px;
+  color: var(--text-light);
+  display: block;
+  margin-bottom: 2px;
+}
+.profile-field p {
+  font-size: 16px;
+  color: var(--text);
+  font-weight: 500;
+}
+.btn-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-logout:hover { opacity: 0.9; }
