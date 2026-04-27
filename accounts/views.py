@@ -1,7 +1,10 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.permissions import  IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializer import RegisterSerializer, AccountSerializer, LoginSerializer
 
 
@@ -71,7 +74,7 @@ def login(request):
     """
     email = request.data.get('email')
     password = request.data.get('password')
-    
+    print(email, password, "checkkkk")
     if not email or not password:
         return Response({
             'status': 400,
@@ -102,3 +105,12 @@ def login(request):
             'status': 401,
             'message': 'Invalid email or password.'
         })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def get_user(request):
+    return Response({
+        'status': 200,
+        'user': AccountSerializer(request.user).data
+    })
