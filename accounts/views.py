@@ -114,3 +114,33 @@ def get_user(request):
         'status': 200,
         'user': AccountSerializer(request.user).data
     })
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def update_user_data(request):
+    user = request.user
+    serialize = AccountSerializer(user, data=request.data, partial=True)
+    if serialize.is_valid():
+        serialize.save()
+        return Response({
+            'status': 200,
+            'message': 'Data updated successfully',
+            'user': serialize.data
+        })
+    return Response({
+        'status': 400,
+        'errors': serialize.errors
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def update_password(request):
+    new_password = request.new_password
+    old_password = request.old_password
+    serialize = AccountSerializer(user, data = request.data, partial=True)
+    if serialize.is_valid():
+        # serialize.save()
+        print(serialize.data)
+    return Response({"msg" : "success"})
