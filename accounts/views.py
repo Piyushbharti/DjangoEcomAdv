@@ -16,6 +16,18 @@ from .serializer import RegisterSerializer, AccountSerializer, LoginSerializer
 # POST: Register new user
 # URL: /accounts/register/
 # ============================================
+
+def _send_otp(email):
+    otp = random.randint(100000, 999999)
+    send_mail(
+        subject='Your OTP Code',
+        message=f'Your OTP is: {otp}',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+    )
+    return otp
+
+
 @api_view(['POST'])
 def register(request):
     """
@@ -141,17 +153,15 @@ def update_user_data(request):
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
 def update_password(request):
-    otp_gen = send_otp_email(request)
-    if otp_gen.status == 200:
-        return Response({"msg" : "otp sent to registered email"})
-    new_password = request.new_password
-    old_password = request.old_password
-    otp_verify = request.otp
-    if otp_gen.otp == otp_verify and new_password == old_password:
-        serialize = AccountSerializer(user, data = request.data, partial=True)
-        if serialize.is_valid():
-            serialize.save()
-            print(serialize.data)
+    otp_gen = _send_otp(request.user.email)
+    print(otp_gen, "otp_gen")
+    new_password = request.data.get('new_password')
+    old_password = request.data.get('old_password')
+    otp_verify = request.data.get('otp')
+    print(otp_gen , otp_verify, "khdfasb")
+    if otp_gen == otp_verify:
+        user.set_password(new_password)
+        user.save()
         return Response({"msg" : "success"})
     else:
         return Response({"msg": "Unable to send mail"})

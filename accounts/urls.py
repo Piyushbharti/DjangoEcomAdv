@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import register, login, get_user, update_user_data, update_password, send_otp_email
+from .views import register, login, get_user, update_user_data, update_password, send_otp_email,update_password
 
 urlpatterns = [
     # Custom: Register
@@ -12,7 +12,7 @@ urlpatterns = [
     path('update-user/', update_user_data),
     path('update-pass/', update_password),
     path('send-otp/', send_otp_email),
-    
+    path('update_password/', update_password),
     # Built-in: Refresh (refresh token → new access token)
     path('token/refresh/', TokenRefreshView.as_view()),
 ]
