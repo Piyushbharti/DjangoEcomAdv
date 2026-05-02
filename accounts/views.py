@@ -5,6 +5,10 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.core.mail import send_mail
+from django.conf import settings
+import random
+
 from .serializer import RegisterSerializer, AccountSerializer, LoginSerializer
 
 
@@ -12,6 +16,18 @@ from .serializer import RegisterSerializer, AccountSerializer, LoginSerializer
 # POST: Register new user
 # URL: /accounts/register/
 # ============================================
+
+def _send_otp(email):
+    otp = random.randint(100000, 999999)
+    send_mail(
+        subject='Your OTP Code',
+        message=f'Your OTP is: {otp}',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+    )
+    return otp
+
+
 @api_view(['POST'])
 def register(request):
     """
@@ -114,3 +130,99 @@ def get_user(request):
         'status': 200,
         'user': AccountSerializer(request.user).data
     })
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def update_user_data(request):
+    user = request.user
+    serialize = AccountSerializer(user, data=request.data, partial=True)
+    if serialize.is_valid():
+        serialize.save()
+        return Response({
+            'status': 200,
+            'message': 'Data updated successfully',
+            'user': serialize.data
+        })
+    return Response({
+        'status': 400,
+        'errors': serialize.errors
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def update_password(request):
+    otp_gen = _send_otp(request.user.email)
+    print(otp_gen, "otp_gen")
+    new_password = request.data.get('new_password')
+    old_password = request.data.get('old_password')
+    otp_verify = request.data.get('otp')
+    print(otp_gen , otp_verify, "khdfasb")
+    if otp_gen == otp_verify:
+        user.set_password(new_password)
+        user.save()
+        return Response({"msg" : "success"})
+    else:
+        return Response({"msg": "Unable to send mail"})
+
+
+# ============================================
+# POST: Send OTP Email
+# URL: /accounts/send-otp/
+# ============================================
+@api_view(['POST'])
+def send_otp_email(request):
+    """
+    User ko email pe OTP bhejta hai.
+    
+    Frontend bhejega:
+    {
+        "email": "rahul@gmail.com"
+    }
+    
+    Flow:
+    1. Email receive karo
+    2. Random 6-digit OTP generate karo
+    3. send_mail() se email bhejo
+    4. OTP return karo (production mein DB mein store karo)
+    """
+    
+    email = request.data.get('email')
+    
+    if not email:
+        return Response({
+            'status': 400,
+            'message': 'Email is required'
+        })
+    
+    # Generate 6-digit OTP
+    otp = random.randint(100000, 999999)
+    
+    # Send email
+    try:
+        send_mail(
+            subject='Your GreatKart OTP Code',
+            message=f'Your OTP code is: {otp}\n\nThis code is valid for 10 minutes.\nDo not share this with anyone.',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        
+        # TODO: Production mein OTP ko DB mein store karo with expiry time
+        # For now, response mein bhej rahe hain (testing ke liye)
+        
+        return Response({
+            'status': 200,
+            'message': f'OTP sent to {email}',
+            'otp': otp,  # ← Production mein ye HATANA hai
+        })
+        
+    except Exception as e:
+        print(f"[EMAIL ERROR] {e}")
+        return Response({
+            'status': 500,
+            'message': 'Failed to send email. Check email settings.',
+            'error': str(e),
+        })
+
