@@ -172,10 +172,20 @@ SIMPLE_JWT = {
 # ============================================
 # EMAIL CONFIGURATION
 # ============================================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# For development: Print emails to console (no SSL issues)
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# For development with actual email sending (bypasses SSL verification)
+EMAIL_BACKEND = 'greatkart.email_backend.CustomEmailBackend'
+
+# For production: Use standard SMTP backend
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'piyush.bharti@snva.com'        
-EMAIL_HOST_PASSWORD = 'aflhfvazxwfhrijy'     
-DEFAULT_FROM_EMAIL = 'Test <piyush.bharti@snva.com>'
+EMAIL_USE_SSL = False  # Don't use SSL with port 587
+EMAIL_HOST_USER = 'piyush19cs39@gmail.com'        
+EMAIL_HOST_PASSWORD = 'jfopvyvvvvmxuadv'  # Use App Password from Google
+DEFAULT_FROM_EMAIL = 'GreatKart <piyush19cs39@gmail.com>'
+EMAIL_TIMEOUT = 30  # Timeout in seconds

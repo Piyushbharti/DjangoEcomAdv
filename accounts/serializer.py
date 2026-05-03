@@ -30,7 +30,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'phone_number']
+        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'phone_number', 'otpVerify']
 
 class LoginSerializer(serializers.ModelSerializer):
     class Meta:

@@ -153,13 +153,13 @@ def update_user_data(request):
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
 def update_password(request):
-    otp_gen = _send_otp(request.user.email)
-    print(otp_gen, "otp_gen")
+    user = request.user
+    serialize = AccountSerializer(user)
+    print(serialize.data, "otp_gen")
     new_password = request.data.get('new_password')
     old_password = request.data.get('old_password')
     otp_verify = request.data.get('otp')
-    print(otp_gen , otp_verify, "khdfasb")
-    if otp_gen == otp_verify:
+    if serialize.data['otpVerify'] == otp_verify:
         user.set_password(new_password)
         user.save()
         return Response({"msg" : "success"})
@@ -167,11 +167,17 @@ def update_password(request):
         return Response({"msg": "Unable to send mail"})
 
 
+
+
+
+
 # ============================================
 # POST: Send OTP Email
 # URL: /accounts/send-otp/
 # ============================================
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def send_otp_email(request):
     """
     User ko email pe OTP bhejta hai.
@@ -188,7 +194,7 @@ def send_otp_email(request):
     4. OTP return karo (production mein DB mein store karo)
     """
     
-    email = request.data.get('email')
+    email = request.user.email
     
     if not email:
         return Response({
@@ -208,6 +214,9 @@ def send_otp_email(request):
             recipient_list=[email],
             fail_silently=False,
         )
+
+        request.user.otpVerify = otp
+        request.user.save()
         
         # TODO: Production mein OTP ko DB mein store karo with expiry time
         # For now, response mein bhej rahe hain (testing ke liye)
