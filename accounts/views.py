@@ -8,7 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.core.mail import send_mail
 from django.conf import settings
 import random
-
+from .models import OTP
 from .serializer import RegisterSerializer, AccountSerializer, LoginSerializer
 
 
@@ -154,17 +154,19 @@ def update_user_data(request):
 @authentication_classes([JWTAuthentication])
 def update_password(request):
     user = request.user
-    serialize = AccountSerializer(user)
-    print(serialize.data, "otp_gen")
     new_password = request.data.get('new_password')
-    old_password = request.data.get('old_password')
     otp_verify = request.data.get('otp')
-    if serialize.data['otpVerify'] == otp_verify:
+    try:
+        otp_obj = OTP.objects.get(email=request.user.email, otp=otp_verify)
+        if otp_obj.is_expired():
+            otp_obj.delete()
+            return Response({"status": 400, "message": "OTP has expired!"})
         user.set_password(new_password)
         user.save()
-        return Response({"msg" : "success"})
-    else:
-        return Response({"msg": "Unable to send mail"})
+        otp_obj.delete()
+        return Response({"status": 200, "message": "OTP verigy success"})
+    except OTP.DoesNotExist:
+        return Response({"status": 400, "message": "Invalid Otp"})
 
 
 
@@ -207,6 +209,12 @@ def send_otp_email(request):
     
     # Send email
     try:
+        
+        existing = OTP.objects.filter(email=email).first()
+        if existing and not existing.is_expired():
+            return Response({"status": 400, "message": "OTP haven't expired yet!"}) 
+        OTP.objects.filter(email=email).delete()
+        OTP.objects.create(email=email, otp=otp)
         send_mail(
             subject='Your GreatKart OTP Code',
             message=f'Your OTP code is: {otp}\n\nThis code is valid for 10 minutes.\nDo not share this with anyone.',
@@ -214,13 +222,6 @@ def send_otp_email(request):
             recipient_list=[email],
             fail_silently=False,
         )
-
-        request.user.otpVerify = otp
-        request.user.save()
-        
-        # TODO: Production mein OTP ko DB mein store karo with expiry time
-        # For now, response mein bhej rahe hain (testing ke liye)
-        
         return Response({
             'status': 200,
             'message': f'OTP sent to {email}',
