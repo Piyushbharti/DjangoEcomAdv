@@ -164,7 +164,7 @@ def update_password(request):
         user.set_password(new_password)
         user.save()
         otp_obj.delete()
-        return Response({"status": 200, "message": "OTP verigy success"})
+        return Response({"status": 200, "message": "OTP verify success"})
     except OTP.DoesNotExist:
         return Response({"status": 400, "message": "Invalid Otp"})
 
