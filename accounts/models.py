@@ -61,3 +61,14 @@ class Account(AbstractBaseUser):
     def has_module_perms(self, add_label):
         
         return True
+
+
+class OTP(models.Model):
+    email = models.EmailField(max_length=100, unique=True)
+    otp = models.CharField(max_length=10, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    def is_expired(self):
+        from django.utils import timezone
+        age = (timezone.now() - self.created_at).seconds
+        return age>60
+
