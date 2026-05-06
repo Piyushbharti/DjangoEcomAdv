@@ -1,11 +1,14 @@
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from store.models import Product
 from rest_framework.response import Response
 from .models import WhishList
 from .serializer import WhishlistSerializer
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import  IsAuthenticated
 
 # Create your views here.
 def cart_id(request):
@@ -26,9 +29,11 @@ def addProductToWhishList(request, product_id):
 
 @csrf_exempt
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def allWishListData(request):
-    cart_id = request.headers.get('X-Cart-Id', '')
-    data = WhishList.objects.filter(cart_id = cart_id)
+    user = request.user
+    data = WhishList.objects.filter(user = user)
     serialize = WhishlistSerializer(data, many=True)
     return Response({'data': serialize.data})
 
