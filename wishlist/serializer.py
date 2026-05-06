@@ -11,7 +11,7 @@ class WhishlistSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(source='product.image', read_only=True)
     stock = serializers.IntegerField(source='product.stock', read_only=True)
     in_stock = serializers.SerializerMethodField()
-
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
     class Meta:
         model = WhishList
         fields = [

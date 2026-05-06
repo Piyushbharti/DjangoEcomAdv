@@ -1,11 +1,12 @@
 from django.db import models
 from store.models import Product
+from accounts.models import Account
 
 # Create your models here.
 class WhishList(models.Model):
-    cart_id = models.CharField(max_length=100)
+    user = models.ForeignKey(Account, on_delete=models.CASCADE, null=True, blank=True)
     product = models.ForeignKey(Product, on_delete= models.CASCADE)
     added_date = models.DateField(auto_now_add=True)
     class Meta:
-        unique_together = ('cart_id', 'product')
+        unique_together = ('user', 'product')
         
