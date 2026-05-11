@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Star, Heart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import axiosInstance, { API_BASE_URL } from '../api/axios';
 
 const ProductDetail = () => {
@@ -12,8 +13,8 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const { addToCart } = useCart();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
   // Review form state
   const [reviewRating, setReviewRating] = useState(0);
@@ -81,17 +82,20 @@ const ProductDetail = () => {
   };
 
   const handleAddToWishlist = async () => {
-    try {
-      const response = await axiosInstance.post(`/wishlist/addToWishlist/${product.id}/`);
-      if (response.data.status === 200 || response.data.status === 201) {
-        setIsWishlisted(true);
-        alert(response.data.message || 'Added to wishlist!');
-      } else {
-        alert(response.data.message || 'Failed to add to wishlist');
+    if (!product) return;
+    
+    if (isInWishlist(product.id)) {
+      const result = await removeFromWishlist(product.id);
+      if (result.success) {
+        alert('Removed from wishlist!');
       }
-    } catch (error) {
-      console.error('Error adding to wishlist:', error);
-      alert('Failed to add to wishlist');
+    } else {
+      const result = await addToWishlist(product.id);
+      if (result.success) {
+        alert(result.message || 'Added to wishlist!');
+      } else {
+        alert(result.message || 'Failed to add to wishlist');
+      }
     }
   };
 
@@ -266,7 +270,12 @@ const ProductDetail = () => {
                 Add to Cart
               </button>
               <button className="btn-buy-now">Buy Now</button>
-              
+              <button 
+                className={`btn-wishlist ${product && isInWishlist(product.id) ? 'active' : ''}`}
+                onClick={handleAddToWishlist}
+              >
+                <Heart size={20} fill={product && isInWishlist(product.id) ? 'currentColor' : 'none'} />
+              </button>
               <button className="btn-share">
                 <Share2 size={20} />
               </button>
