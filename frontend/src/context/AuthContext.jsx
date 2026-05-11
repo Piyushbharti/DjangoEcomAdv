@@ -108,6 +108,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    // Page reload — saare contexts fresh ho jaayenge
+    window.location.href = '/';
   };
 
   return (

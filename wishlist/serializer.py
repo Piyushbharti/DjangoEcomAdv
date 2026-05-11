@@ -24,6 +24,7 @@ class WhishlistSerializer(serializers.ModelSerializer):
             'stock',
             'in_stock',
             'added_date',
+            'user_id'
         ]
 
     def get_in_stock(self, obj):

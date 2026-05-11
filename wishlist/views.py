@@ -11,17 +11,14 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import  IsAuthenticated
 
 # Create your views here.
-def cart_id(request):
-    cart_id = request.headers.get('X-Cart-Id', '')
-    return cart_id
-
 
 @csrf_exempt
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def addProductToWhishList(request, product_id):
-    cart_id = request.headers.get('X-Cart-Id', '')
     product = get_object_or_404(Product, id = product_id)
-    item, created = WhishList.objects.get_or_create(cart_id = cart_id, product=product)
+    item, created = WhishList.objects.get_or_create(user = request.user, product=product)
     if created:
         return Response({'status': 201, 'message': 'Success'})
     else:
@@ -39,18 +36,20 @@ def allWishListData(request):
 
 @csrf_exempt
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def deleteWishListData(request, product_id):
-    cart_id = request.headers.get('X-Cart-Id', '')
-    data = get_object_or_404(WhishList, cart_id = cart_id, product_id = product_id)
+    data = get_object_or_404(WhishList, user = request.user, product_id = product_id)
     data.delete()
-    remaning = WhishList.objects.filter(cart_id = cart_id)
+    remaning = WhishList.objects.filter(user = request.user)
     serialize = WhishlistSerializer(remaning, many=True)
     return Response({'data': serialize.data})
 
 @csrf_exempt
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def delAllWishListData(request):
-    cart_id = request.headers.get('X-Cart-Id', '')
-    data = WhishList.objects.filter(cart_id = cart_id)
+    data = WhishList.objects.filter(user = request.user)
     data.delete()
     return Response({'data': [], 'message': 'All WishList Removed'})
