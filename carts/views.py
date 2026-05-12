@@ -1,9 +1,10 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import  IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-
 from store.models import Product, Variation
 from .models import Cart, CartItem
 from .serializer import VariationSerializer
@@ -214,3 +215,20 @@ def delete_cart(request, product_id):
 @api_view(['GET'])
 def temp(request):
     return Response({"status": 200, "message": "Cart API is running"})
+
+
+@csrf_exempt
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def merge_cart(request):
+    localCartId = request.headers.get('X-Cart-Id', '')
+    if localCartId:
+        try:
+            localCart = Cart.objects.get(cart_id=localCartId)
+            localCart.user = request.user
+            localCart.save()
+        except Exception as e:
+            print(e)
+            return Response({"status": 400, "message": "Invalid Cart Id"})
+    return Response({"status": 200, "message": "Cart Added Successfully!"})

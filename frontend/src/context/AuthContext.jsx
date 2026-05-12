@@ -60,6 +60,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('refresh_token', response.data.tokens.refresh);
         setUser(response.data.user);
         localStorage.setItem('user', JSON.stringify(response.data.user));
+
+        // Login ke baad guest cart ko user se link karo
+        try {
+          await axiosInstance.post('/cart/merge/');
+        } catch (err) {
+          console.error('Cart merge failed:', err);
+        }
+
         return { success: true };
       }
       return { success: false, message: response.data.message || 'Login failed' };

@@ -4,7 +4,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import Product, Variation
 from category.models import Category
-from .serializer import ProductSerializer, ProductWithVariationsSerializer
+from .serializer import ProductSerializer, ProductWithVariationsSerializer, VariationSerializer
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
@@ -111,5 +111,11 @@ def getSingleProductByCatV2(request, slug):
         {"product": serializer.data},
         status=200
     )
+
+@api_view(['GET'])
+def getProductVariation(request, product_id):
+    variations = Variation.objects.filter(product= product_id)
+    serialize = VariationSerializer(variations, many=True)
+    return Response({"status": 200, "data": serialize.data})
 
 
