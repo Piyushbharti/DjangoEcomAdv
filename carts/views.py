@@ -23,6 +23,24 @@ def _cart_id(request):
     print(f"[CART ID] {cart_id}")
     return cart_id
 
+def _get_or_create_cart(request):
+    cart_id = request.headers.get('X-Cart-Id', '')
+    if request.user.is_authenticated:
+        cart = Cart.objects.filter(user=request.user).first()
+        if cart:
+            return cart
+        else:
+            cart_with_cart_id = Cart.objects.filter(cart_id = cart_id).first()
+            if cart_with_cart_id:
+                cart_with_cart_id.user = request.user
+                cart_with_cart_id.save()
+                return cart_with_cart_id
+        cart = Cart.objects.create(user=request.user, cart_id = cart_id)
+    else:
+        cart, created = Cart.objects.get_or_create(cart_id=cart_id)
+        if created:
+            return cart
+
 
 # ============================================================
 #  HELPER: Build the full cart response
@@ -87,9 +105,9 @@ def getAllVariation(request):
 # ============================================================
 @csrf_exempt
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
 def add_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-
     cart_id = _cart_id(request)
     if not cart_id:
         return Response({"status": 400, "message": "Missing X-Cart-Id header"}, status=400)
@@ -155,6 +173,29 @@ def add_cart(request, product_id):
             "variations": cart_item.variations,
         }
     })
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+def add_to_cart(request, product_id ):
+    cart_id = request.headers.get('X-Cart-Id', '')
+    cart = _get_or_create_cart(request)
+    variations_id = request.data.get('variations_id', [])
+    variation_data = []
+    for v in variations_id:
+        try:
+            variation = Variation.objects.get(id = v, product_id=product_id, is_active=True)
+            variation_value = VariationSerializer(variation).data
+            variation_data.append(variation_value)
+        except Variation.DoesNotExist:
+            return Response({"status": 400, "message": "Invalid Variation Id"})
+    cart_Item, created = CartItem.objects.get_or_create(
+        cart=cart, product_id=product_id,
+        defaults={"quantity": 1, "variations": variation_data}
+    )
+    print(variation, cart_Item)
+    
+    return Response({})
+
 
 
 # ============================================================

@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 @api_view(['GET'])
 def getAllProduct(request):
     product = Product.objects.all().filter(is_available = True)
-    serializer = ProductSerializer(product, many=True)
+    serializer = ProductWithVariationsSerializer(product, many=True)
     return Response({"status":200, "data": serializer.data})
 
 @csrf_exempt
