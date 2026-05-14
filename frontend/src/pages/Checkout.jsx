@@ -3,14 +3,105 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Lock } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import axiosInstance from '../api/axios';
 
+// Apni Stripe publishable key yahan daalo
+const stripePromise = loadStripe('pk_test_51TWuNSR1JRf8WLPhzy0DPWEleUf8GAxfrCqopbCejkBLdrvbaWxVSERygMStIfsnvWxwhW3XY2OdDny1uxdEUj1400Q92qWy40');
+
+// ============================================================
+//  Payment Form (Stripe CardElement ke saath)
+// ============================================================
+const PaymentForm = ({ shippingAddress, total, cartItems }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Step 1: Backend se client_secret lo
+      const { data } = await axiosInstance.post('/payments/create-payment-intent/', {
+        amount: Math.round(total * 100),  // dollars to cents
+      });
+
+      // Step 2: Stripe se payment confirm karo
+      const result = await stripe.confirmCardPayment(data.client_secret, {
+        payment_method: {
+          card: elements.getElement(CardElement),
+          billing_details: {
+            name: shippingAddress.full_name,
+          },
+        },
+      });
+
+      if (result.error) {
+        setError(result.error.message);
+      } else if (result.paymentIntent.status === 'succeeded') {
+        // Payment successful!
+        alert('Payment successful! 🎉');
+        navigate('/orders');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Payment failed. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="stripe-card-element">
+        <CardElement
+          options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': { color: '#aab7c4' },
+              },
+              invalid: { color: '#9e2146' },
+            },
+          }}
+        />
+      </div>
+
+      {error && <p className="payment-error">{error}</p>}
+
+      <button
+        type="submit"
+        className="btn-place-order"
+        disabled={!stripe || loading}
+      >
+        <Lock size={18} />
+        {loading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+      </button>
+
+      <p className="secure-text">
+        Your transaction is secure and encrypted by Stripe
+      </p>
+    </form>
+  );
+};
+
+// ============================================================
+//  Checkout Page
+// ============================================================
 const Checkout = () => {
   const { cartItems, cartTotal } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [shippingAddress, setShippingAddress] = useState({
-    full_name: user?.first_name + ' ' + user?.last_name || '',
+    full_name: (user?.first_name || '') + ' ' + (user?.last_name || ''),
     address_line1: '',
     address_line2: '',
     city: '',
@@ -20,16 +111,6 @@ const Checkout = () => {
     phone: user?.phone_number || '',
   });
 
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [cardDetails, setCardDetails] = useState({
-    card_number: '',
-    card_name: '',
-    expiry_date: '',
-    cvv: '',
-  });
-
-  const [loading, setLoading] = useState(false);
-
   const handleShippingChange = (e) => {
     setShippingAddress(prev => ({
       ...prev,
@@ -37,36 +118,7 @@ const Checkout = () => {
     }));
   };
 
-  const handleCardChange = (e) => {
-    setCardDetails(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // TODO: Implement order placement API
-    // Backend endpoint needed: POST /orders/create/
-    try {
-      // const response = await axiosInstance.post('/orders/create/', {
-      //   shipping_address: shippingAddress,
-      //   payment_method: paymentMethod,
-      //   items: cartItems,
-      // });
-      
-      alert('Order placed successfully!');
-      navigate('/orders');
-    } catch (error) {
-      alert('Failed to place order. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const shippingCost = 0; // Free shipping
+  const shippingCost = 0;
   const tax = cartTotal * 0.08;
   const total = cartTotal + shippingCost + tax;
 
@@ -80,7 +132,7 @@ const Checkout = () => {
             {/* Shipping Address */}
             <section className="checkout-section">
               <h2>1. Shipping Address</h2>
-              <form className="address-form">
+              <div className="address-form">
                 <div className="form-group">
                   <label>Full Name</label>
                   <input
@@ -158,103 +210,19 @@ const Checkout = () => {
                     required
                   />
                 </div>
-              </form>
+              </div>
             </section>
 
-            {/* Payment Method */}
+            {/* Payment — Stripe Card Element */}
             <section className="checkout-section">
-              <h2>2. Payment Method</h2>
-              
-              <div className="payment-methods">
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="card"
-                    checked={paymentMethod === 'card'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  />
-                  <span>Credit or Debit Card</span>
-                </label>
-
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="paypal"
-                    checked={paymentMethod === 'paypal'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  />
-                  <span>PayPal</span>
-                </label>
-
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  />
-                  <span>Cash on Delivery</span>
-                </label>
-              </div>
-
-              {paymentMethod === 'card' && (
-                <div className="card-form">
-                  <div className="form-group">
-                    <label>Card Number</label>
-                    <input
-                      type="text"
-                      name="card_number"
-                      value={cardDetails.card_number}
-                      onChange={handleCardChange}
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Name on Card</label>
-                    <input
-                      type="text"
-                      name="card_name"
-                      value={cardDetails.card_name}
-                      onChange={handleCardChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Expiry Date</label>
-                      <input
-                        type="text"
-                        name="expiry_date"
-                        value={cardDetails.expiry_date}
-                        onChange={handleCardChange}
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>CVV</label>
-                      <input
-                        type="text"
-                        name="cvv"
-                        value={cardDetails.cvv}
-                        onChange={handleCardChange}
-                        placeholder="123"
-                        maxLength={4}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              <h2>2. Payment</h2>
+              <Elements stripe={stripePromise}>
+                <PaymentForm
+                  shippingAddress={shippingAddress}
+                  total={total}
+                  cartItems={cartItems}
+                />
+              </Elements>
             </section>
 
             {/* Review Items */}
@@ -278,7 +246,7 @@ const Checkout = () => {
           {/* Order Summary */}
           <aside className="checkout-summary">
             <h3>Order Summary</h3>
-            
+
             <div className="summary-row">
               <span>Items ({cartItems.length}):</span>
               <span>${cartTotal.toFixed(2)}</span>
@@ -300,19 +268,6 @@ const Checkout = () => {
               <strong>Order Total:</strong>
               <strong>${total.toFixed(2)}</strong>
             </div>
-
-            <button 
-              className="btn-place-order"
-              onClick={handlePlaceOrder}
-              disabled={loading}
-            >
-              <Lock size={18} />
-              {loading ? 'Processing...' : 'Place Order'}
-            </button>
-
-            <p className="secure-text">
-              Your transaction is secure and encrypted
-            </p>
           </aside>
         </div>
       </div>

@@ -192,9 +192,15 @@ def add_to_cart(request, product_id ):
         cart=cart, product_id=product_id,
         defaults={"quantity": 1, "variations": variation_data}
     )
-    print(variation, cart_Item)
-    
-    return Response({})
+    if not created:
+        cart_Item.quantity += 1
+        cart_Item.save()
+    return Response({"status": 200, "data": {
+    "product_id": cart_Item.product_id,
+    "quantity": cart_Item.quantity,
+    "variations": cart_Item.variations,
+}})
+
 
 
 
