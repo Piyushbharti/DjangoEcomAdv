@@ -1,0 +1,18 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# Virtual environment
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Media uploads (optional - remove if you want to track)
+media/
