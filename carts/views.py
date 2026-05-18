@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from store.models import Product, Variation
 from .models import Cart, CartItem
-from .serializer import VariationSerializer
+from .serializer import VariationSerializer, CartItemSerializer
 
 
 # ============================================================
@@ -279,3 +279,14 @@ def merge_cart(request):
             print(e)
             return Response({"status": 400, "message": "Invalid Cart Id"})
     return Response({"status": 200, "message": "Cart Added Successfully!"})
+
+@csrf_exempt
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def getAllCatItem(request):
+    user = request.user
+    cartId = Cart.objects.filter(user=user).first()
+    cartItem = CartItem.objects.filter(cart=cartId)
+    serialize = CartItemSerializer(cartItem, many=True)
+    return Response({"status": 200, "data": serialize.data})

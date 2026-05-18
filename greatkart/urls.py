@@ -31,4 +31,5 @@ urlpatterns = [
     path('user-auth/', include('user.urls')),
     path('temp-api-rate-limited/', temp_api_rate_limited, name='temp_api_rate_limited'),
     path('payments/', include('payments.urls')),
+    path('orders/', include('orders.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -5,9 +5,8 @@ from rest_framework.permissions import  IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from store.models import Product, Variation
-from .models import Cart, CartItem
-from .serializer import VariationSerializer
+from store.models import Product
+from carts.models import Cart, CartItem
 from django.db import transaction
 
 
@@ -15,7 +14,7 @@ from django.db import transaction
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
-def temp(request):
+def Order(request):
     isAuthenticated = request.user.is_authenticated
     if isAuthenticated:
         try:
@@ -23,4 +22,18 @@ def temp(request):
             payment_info = request.data.get('payment_info')
             cart = Cart.objects.get(user=request.user)
             with transaction.atomic():
-                
+                cart_items = CartItem.objects.filter(cart=cart)
+                total = 0
+                order_item_data = []
+                for item in cart_items:
+                    print(item.quantity, "checllll")
+        except:
+            return 
+        Response({
+                "code": 400,
+                'message': "Bad Request"
+            })
+    return Response({
+        "code": 200,
+        'message': "Success"
+    })
