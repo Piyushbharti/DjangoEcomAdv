@@ -15,33 +15,8 @@ const Orders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // TODO: Implement backend endpoint: GET /orders/my-orders/
-      // const response = await axiosInstance.get('/orders/my-orders/');
-      // setOrders(response.data.orders || []);
-      
-      // Mock data for now
-      setOrders([
-        {
-          id: 1,
-          order_number: 'ORD-2026-001',
-          date: '2026-04-10',
-          status: 'delivered',
-          total: 299.99,
-          items: [
-            { id: 1, name: 'Product 1', quantity: 2, price: 149.99 }
-          ]
-        },
-        {
-          id: 2,
-          order_number: 'ORD-2026-002',
-          date: '2026-04-12',
-          status: 'shipped',
-          total: 89.99,
-          items: [
-            { id: 2, name: 'Product 2', quantity: 1, price: 89.99 }
-          ]
-        }
-      ]);
+      const response = await axiosInstance.get('/orders/my-orders/');
+      setOrders(response.data.orders || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -122,7 +97,7 @@ const Orders = () => {
                 <div className="order-header">
                   <div className="order-info">
                     <h3>{order.order_number}</h3>
-                    <p>Placed on {new Date(order.date).toLocaleDateString()}</p>
+                    <p>Placed on {new Date(order.created_at).toLocaleDateString()}</p>
                   </div>
                   <div className="order-status">
                     {getStatusIcon(order.status)}
@@ -133,13 +108,12 @@ const Orders = () => {
                 </div>
 
                 <div className="order-items">
-                  {order.items.map(item => (
-                    <div key={item.id} className="order-item">
-                      <img src="/placeholder.jpg" alt={item.name} />
+                  {order.items.map((item, index) => (
+                    <div key={index} className="order-item">
                       <div className="item-details">
-                        <h4>{item.name}</h4>
+                        <h4>{item.product_name}</h4>
                         <p>Quantity: {item.quantity}</p>
-                        <p className="item-price">${item.price}</p>
+                        <p className="item-price">${item.product_price}</p>
                       </div>
                     </div>
                   ))}

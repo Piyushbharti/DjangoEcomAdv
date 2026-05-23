@@ -46,8 +46,16 @@ const PaymentForm = ({ shippingAddress, total, cartItems }) => {
       if (result.error) {
         setError(result.error.message);
       } else if (result.paymentIntent.status === 'succeeded') {
-        // Payment successful!
-        alert('Payment successful! 🎉');
+        // Step 3: Order create karo
+        await axiosInstance.post('/orders/create/', {
+          shipping_address: shippingAddress,
+          payment_info: {
+            payment_intent_id: result.paymentIntent.id,
+            method: 'card',
+          },
+        });
+
+        alert('Order placed successfully! 🎉');
         navigate('/orders');
       }
     } catch (err) {
