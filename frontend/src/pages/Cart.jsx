@@ -38,7 +38,7 @@ const Cart = () => {
             {cartItems.map((item) => (
               <div key={item.product_id} className="cart-item">
                 <img 
-                  src={item.image ? `${API_BASE_URL}${item.image}` : '/placeholder.jpg'} 
+                  src={item.image_url || (item.image ? `${API_BASE_URL}${item.image}` : '/placeholder.jpg')} 
                   alt={item.product_name}
                   className="cart-item-image"
                 />

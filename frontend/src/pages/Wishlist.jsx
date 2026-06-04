@@ -86,7 +86,7 @@ const Wishlist = () => {
             {wishlistItems.map(item => (
               <div key={item.id} className="wishlist-item">
                 <Link to={`/product/${item.slug}`}>
-                  <img src={`${API_BASE_URL}${item.image}`} alt={item.product_name} />
+                  <img src={item.image_url || `${API_BASE_URL}${item.image}`} alt={item.product_name} />
                 </Link>
                 <div className="item-info">
                   <Link to={`/product/${item.slug}`}>

@@ -46,7 +46,7 @@ const ProductCard = ({ product }) => {
       <Link to={`/product/${product.slug}`} className="product-link">
         <div className="product-image-wrapper">
           <img 
-            src={product.image ? `${API_BASE_URL}${product.image}` : '/placeholder.jpg'} 
+            src={product.image_url || (product.image ? `${API_BASE_URL}${product.image}` : '/placeholder.jpg')} 
             alt={product.product_name}
             className="product-image"
           />

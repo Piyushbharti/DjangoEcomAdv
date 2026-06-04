@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import getAllProduct, postNewProduct, update_product, getProductByCat,getAllProductByPagination, searchProduct, getSingleProductByCatV2, getProductVariation
+from .views import getAllProduct, postNewProduct, update_product, getProductByCat,getAllProductByPagination, searchProduct, getSingleProductByCatV2, getProductVariation, getRecommendedProduct
 
 urlpatterns = [
     path('getAllProduct/', getAllProduct),
@@ -10,4 +10,5 @@ urlpatterns = [
     path('allProduct/', getAllProductByPagination),
     path('search/', searchProduct),
     path('getVariationByProduct/<int:product_id>', getProductVariation),
+    path('getRecommendedProduct/<int:product_id>', getRecommendedProduct),
 ]

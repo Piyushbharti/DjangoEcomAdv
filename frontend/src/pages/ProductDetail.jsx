@@ -149,7 +149,7 @@ const ProductDetail = () => {
     return <div className="error-page">Product not found</div>;
   }
 
-  const images = [product.image, product.image, product.image];
+  const images = [product.image_url || `${API_BASE_URL}${product.image}`];
   const hasVariations = Object.keys(groupedVariations).length > 0;
 
   return (
@@ -170,7 +170,7 @@ const ProductDetail = () => {
               {images.map((img, index) => (
                 <img
                   key={index}
-                  src={`${API_BASE_URL}${img}`}
+                  src={img}
                   alt={`${product.product_name} ${index + 1}`}
                   className={activeImage === index ? 'active' : ''}
                   onClick={() => setActiveImage(index)}
@@ -178,7 +178,7 @@ const ProductDetail = () => {
               ))}
             </div>
             <div className="main-image">
-              <img src={`${API_BASE_URL}${images[activeImage]}`} alt={product.product_name} />
+              <img src={images[activeImage]} alt={product.product_name} />
             </div>
           </div>
 

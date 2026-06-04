@@ -31,6 +31,7 @@ class ProductWithVariationsSerializer(serializers.ModelSerializer):
             'description',
             'price',
             'image',
+            'image_url',
             'stock',
             'is_available',
             'category',

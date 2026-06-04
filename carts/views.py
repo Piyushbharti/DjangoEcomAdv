@@ -51,7 +51,6 @@ def _build_cart_response(cart):
     cart_items = []
 
     items = CartItem.objects.filter(cart=cart, is_active=True)
-
     for item in items:
         subtotal = item.product.price * item.quantity
         total += subtotal
@@ -61,6 +60,8 @@ def _build_cart_response(cart):
             "product_id": item.product.id,
             "product_name": item.product.product_name,
             "price": item.product.price,
+            "image": item.product.image.url if item.product.image else '',
+            "image_url": item.product.image_url or '',
             "quantity": item.quantity,
             "subtotal": subtotal,
             "variations": item.variations,

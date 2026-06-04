@@ -4,10 +4,13 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import Product, Variation
 from category.models import Category
+from orders.models import OrderItem
 from .serializer import ProductSerializer, ProductWithVariationsSerializer, VariationSerializer
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
+
 
 # Create your views here.
 @api_view(['GET'])
@@ -117,5 +120,29 @@ def getProductVariation(request, product_id):
     variations = Variation.objects.filter(product= product_id)
     serialize = VariationSerializer(variations, many=True)
     return Response({"status": 200, "data": serialize.data})
+
+@api_view(['GET'])
+def getRecommendedProduct(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    user_orders = OrderItem.objects.filter(product=product_id).values_list('order__user', flat=True)
+    
+    other_products = OrderItem.objects.filter(
+        order__user__in=user_orders
+    ).exclude(product=product_id).values('product').annotate(
+        count=Count('product')
+    ).order_by('-count')[:6]
+
+    other_product_ids = [item['product'] for item in other_products]
+    products = Product.objects.filter(id__in=other_product_ids, is_available=True)
+
+    # Fallback: same category
+    if not products.exists():
+        products = Product.objects.filter(
+            category=product.category, is_available=True
+        ).exclude(id=product_id)[:6]
+
+    serializer = ProductSerializer(products, many=True)
+    return Response({'status': 200, 'data': serializer.data})
 
 
