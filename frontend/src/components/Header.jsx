@@ -1,21 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Search, Menu, Heart, MapPin } from 'lucide-react';
+import { ShoppingCart, User, Search, Menu, Heart, MapPin, Clock, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { saveSearch, getRecentSearches, deleteSearch, clearSearches } from '../utils/searchHistoryDB';
 
 const Header = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef(null);
   const navigate = useNavigate();
   const { cartCount } = useCart();
   const { user, logout } = useAuth();
 
-  const handleSearch = (e) => {
+  // Load recent searches from IndexedDB
+  useEffect(() => {
+    loadRecentSearches();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const loadRecentSearches = async () => {
+    const searches = await getRecentSearches();
+    setRecentSearches(searches);
+  };
+
+  const handleSearch = async (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      await saveSearch(searchTerm);
+      await loadRecentSearches();
+      setShowSearchDropdown(false);
       navigate(`/search?q=${searchTerm}`);
     }
+  };
+
+  const handleRecentSearchClick = (keyword) => {
+    setSearchTerm(keyword);
+    setShowSearchDropdown(false);
+    navigate(`/search?q=${keyword}`);
+  };
+
+  const handleDeleteSearch = async (e, id) => {
+    e.stopPropagation();
+    await deleteSearch(id);
+    await loadRecentSearches();
+  };
+
+  const handleClearAll = async () => {
+    await clearSearches();
+    setRecentSearches([]);
   };
 
   return (
@@ -46,24 +91,53 @@ const Header = () => {
             </Link>
 
             {/* Search Bar */}
-            <form className="search-bar" onSubmit={handleSearch}>
-              <select className="search-category">
-                <option value="">All</option>
-                <option value="electronics">Electronics</option>
-                <option value="fashion">Fashion</option>
-                <option value="home">Home</option>
-                <option value="books">Books</option>
-              </select>
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <button type="submit" className="search-btn">
-                <Search size={20} />
-              </button>
-            </form>
+            <div className="search-container" ref={searchRef}>
+              <form className="search-bar" onSubmit={handleSearch}>
+                <select className="search-category">
+                  <option value="">All</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="fashion">Fashion</option>
+                  <option value="home">Home</option>
+                  <option value="books">Books</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => setShowSearchDropdown(true)}
+                />
+                <button type="submit" className="search-btn">
+                  <Search size={20} />
+                </button>
+              </form>
+
+              {/* Recent Searches Dropdown */}
+              {showSearchDropdown && recentSearches.length > 0 && (
+                <div className="search-dropdown">
+                  <div className="search-dropdown-header">
+                    <span>Recent Searches</span>
+                    <button onClick={handleClearAll} className="clear-all-btn">Clear All</button>
+                  </div>
+                  {recentSearches.map((item) => (
+                    <div
+                      key={item.id}
+                      className="search-dropdown-item"
+                      onClick={() => handleRecentSearchClick(item.displayText)}
+                    >
+                      <Clock size={14} />
+                      <span>{item.displayText}</span>
+                      <button
+                        className="delete-search-btn"
+                        onClick={(e) => handleDeleteSearch(e, item.id)}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Right Actions */}
             <div className="header-actions">

@@ -127,7 +127,7 @@ def getRecommendedProduct(request, product_id):
 
     user_orders = OrderItem.objects.filter(product=product_id).values_list('order__user', flat=True)
     
-    other_products = OrderItem.objects.filter(
+    other_products =   OrderItem.objects.filter(
         order__user__in=user_orders
     ).exclude(product=product_id).values('product').annotate(
         count=Count('product')
@@ -136,7 +136,6 @@ def getRecommendedProduct(request, product_id):
     other_product_ids = [item['product'] for item in other_products]
     products = Product.objects.filter(id__in=other_product_ids, is_available=True)
 
-    # Fallback: same category
     if not products.exists():
         products = Product.objects.filter(
             category=product.category, is_available=True
