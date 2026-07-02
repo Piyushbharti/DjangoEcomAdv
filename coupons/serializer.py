@@ -4,7 +4,7 @@ from .models import CouponUsage, Coupon
 class CouponUsageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CouponUsage
-        fields = ['user', 'used_at']
+        fields = ['user_id', 'used_at']
 
 class CouponSerializer(serializers.ModelSerializer):
     class Meta:
