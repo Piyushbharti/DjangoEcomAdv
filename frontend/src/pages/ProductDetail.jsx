@@ -24,6 +24,8 @@ const ProductDetail = () => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewImage, setReviewImage] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [isNotified, setIsNotified] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -96,6 +98,32 @@ const ProductDetail = () => {
       } else {
         alert(result.message || 'Failed to add to wishlist');
       }
+    }
+  };
+
+  const handleNotifyMe = async () => {
+    if (!product || notifyLoading) return;
+    
+    setNotifyLoading(true);
+    try {
+      const response = await axiosInstance.post('/notifications/notifyMe/', {
+        product_id: product.id
+      });
+
+      if (response.data.message) {
+        setIsNotified(true);
+        alert(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error adding notification:', error);
+      if (error.response?.status === 400) {
+        alert('You are already subscribed for notifications!');
+        setIsNotified(true);
+      } else {
+        alert('Failed to enable notification. Please try again.');
+      }
+    } finally {
+      setNotifyLoading(false);
     }
   };
 
@@ -262,14 +290,25 @@ const ProductDetail = () => {
 
             {/* Action Buttons */}
             <div className="action-buttons">
-              <button
-                className="btn-add-to-cart"
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-              >
-                Add to Cart
-              </button>
-              <button className="btn-buy-now">Buy Now</button>
+              {product.stock > 0 ? (
+                <>
+                  <button
+                    className="btn-add-to-cart"
+                    onClick={handleAddToCart}
+                  >
+                    Add to Cart
+                  </button>
+                  <button className="btn-buy-now">Buy Now</button>
+                </>
+              ) : (
+                <button
+                  className="btn-notify-me"
+                  onClick={handleNotifyMe}
+                  disabled={isNotified || notifyLoading}
+                >
+                  {notifyLoading ? 'Notifying...' : isNotified ? 'Notification Enabled ✓' : 'Notify Me'}
+                </button>
+              )}
               <button 
                 className={`btn-wishlist ${product && isInWishlist(product.id) ? 'active' : ''}`}
                 onClick={handleAddToWishlist}

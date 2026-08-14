@@ -10,6 +10,18 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count
+from django.core.mail import send_mail
+from django.conf import settings
+from notifications.models import StockNotification
+
+def _send_stock_update(notification):
+    send_mail(
+            subject=f'Your {notification.product} is back in stock!',
+            message=f'Your {notification.product} is back in stock!',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[notification.user.email],
+            fail_silently=False,
+        )
 
 
 # Create your views here.
@@ -88,12 +100,35 @@ def getAllProductByPagination(request):
     
 @api_view(['GET'])
 def searchProduct(request):
-    keyword = request.GET.get('keyword')
-    products = Product.objects.none()
-    if keyword:
-        products = Product.objects.filter(Q(product_name__icontains=keyword) | Q(category__category_name__icontains=keyword))
-    paginator = Paginator(products, 1)
-    page = request.GET.get('page',1)
+    search = request.GET.get('search')
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+    sortBy = request.GET.get('sortBy')
+    products = Product.objects.all()
+
+    if search:
+        products = products.filter(
+            Q(product_name__icontains=search) | Q(category__category_name__icontains=search)
+        )
+    if min_price:
+        products = products.filter(price__gte=min_price)
+    if max_price:
+        products = products.filter(price__lte=max_price)
+
+    # Sorting
+    if sortBy == 'price_low':
+        products = products.order_by('price')
+    elif sortBy == 'price_high':
+        products = products.order_by('-price')
+    elif sortBy == 'newest':
+        products = products.order_by('-created_date')
+    elif sortBy == 'oldest':
+        products = products.order_by('created_date')
+    else:
+        products = products.order_by('-created_date')
+
+    paginator = Paginator(products, 10)
+    page = request.GET.get('page', 1)
     paged_products = paginator.get_page(page)
     serializer = ProductSerializer(paged_products, many=True)
     return Response({
@@ -106,7 +141,6 @@ def searchProduct(request):
 
 @api_view(['GET'])
 def getSingleProductByCatV2(request, slug):
-
     product = get_object_or_404(Product, slug=slug)
     serializer = ProductWithVariationsSerializer(product)
 
@@ -145,3 +179,15 @@ def getRecommendedProduct(request, product_id):
     return Response({'status': 200, 'data': serializer.data})
 
 
+@api_view(['POST'])
+def updateStock(request, product_id):
+    product = Product.objects.get(id = product_id)
+    old_stock = product.stock
+    new_stock = request.data.get('stock')
+    product.stock = new_stock
+    product.save()
+    if old_stock == 0 and new_stock > 0:
+        allNotifyStockUpdate = StockNotification.objects.filter(product = product_id)
+        for toNotify in allNotifyStockUpdate:
+            _send_stock_update(toNotify)
+    return Response({'Message': 'Notification send!'})

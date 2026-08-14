@@ -6,6 +6,7 @@ import { ToastProvider } from './components/Toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import FlashSales from './pages/FlashSales';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
@@ -28,6 +29,8 @@ function App() {
             <main className="main-content">
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/flash-sales" element={<FlashSales />} />
+                <Route path="/deals" element={<FlashSales />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/search" element={<Products />} />
                 <Route path="/category/:categorySlug" element={<Products />} />

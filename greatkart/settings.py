@@ -30,7 +30,9 @@ INSTALLED_APPS = [
     'user',
     'payments',
     'orders',
-    'coupons'
+    'coupons',
+    'notifications',
+    'flashSale',
 ]
 
 MIDDLEWARE = [

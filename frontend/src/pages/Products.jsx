@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
-import { Filter, ChevronDown } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import axiosInstance from '../api/axios';
 
@@ -12,40 +12,60 @@ const Products = () => {
   const [filters, setFilters] = useState({
     minPrice: '',
     maxPrice: '',
-    rating: '',
-    inStock: false,
-    freeShipping: false,
-    prime: false,
   });
-  const [sortBy, setSortBy] = useState('featured');
+  const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [categorySlug, searchParams]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const keyword = searchParams.get('q');
-      let url = '/store/getAllProduct/';
-      
-      if (keyword) {
-        url = `/store/search/?keyword=${keyword}`;
-      } else if (categorySlug) {
-        url = `/store/productBySlug/${categorySlug}`;
+
+      // If category slug, use category endpoint (no filters)
+      if (categorySlug && !keyword) {
+        const response = await axiosInstance.get(`/store/productBySlug/${categorySlug}`);
+        if (response.data.status === 200) {
+          setProducts(response.data.data || []);
+          setTotalPages(1);
+          setTotalCount(response.data.data?.length || 0);
+        }
+        return;
       }
-      
-      const response = await axiosInstance.get(url);
+
+      // Use search endpoint with filters
+      const params = new URLSearchParams();
+      if (keyword) params.append('search', keyword);
+      if (filters.minPrice) params.append('min_price', filters.minPrice);
+      if (filters.maxPrice) params.append('max_price', filters.maxPrice);
+      if (sortBy) params.append('sortBy', sortBy);
+      params.append('page', currentPage);
+
+      const response = await axiosInstance.get(`/store/search/?${params.toString()}`);
       if (response.data.status === 200) {
         setProducts(response.data.data || []);
+        setTotalPages(response.data.total_pages || 1);
+        setTotalCount(response.data.count || 0);
+        setCurrentPage(response.data.current_page || 1);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [categorySlug, searchParams, filters, sortBy, currentPage]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Reset page to 1 when filters/sort/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortBy, searchParams]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -53,18 +73,33 @@ const Products = () => {
 
   const handleSortChange = (value) => {
     setSortBy(value);
-    // TODO: Implement sorting logic
   };
 
   const clearFilters = () => {
-    setFilters({
-      minPrice: '',
-      maxPrice: '',
-      rating: '',
-      inStock: false,
-      freeShipping: false,
-      prime: false,
-    });
+    setFilters({ minPrice: '', maxPrice: '' });
+    setSortBy('newest');
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
   };
 
   return (
@@ -72,17 +107,17 @@ const Products = () => {
       <div className="container">
         <div className="products-header">
           <h1>
-            {searchParams.get('q') 
-              ? `Search results for "${searchParams.get('q')}"` 
-              : categorySlug 
+            {searchParams.get('q')
+              ? `Search results for "${searchParams.get('q')}"`
+              : categorySlug
                 ? categorySlug.replace('-', ' ').toUpperCase()
                 : 'All Products'}
           </h1>
-          <p className="results-count">{products.length} results</p>
+          <p className="results-count">{totalCount} results</p>
         </div>
 
         <div className="products-controls">
-          <button 
+          <button
             className="filter-toggle"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -93,11 +128,10 @@ const Products = () => {
           <div className="sort-dropdown">
             <label>Sort by:</label>
             <select value={sortBy} onChange={(e) => handleSortChange(e.target.value)}>
-              <option value="featured">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Customer Rating</option>
               <option value="newest">Newest Arrivals</option>
+              <option value="oldest">Oldest</option>
+              <option value="price_low">Price: Low to High</option>
+              <option value="price_high">Price: High to Low</option>
             </select>
           </div>
         </div>
@@ -130,63 +164,6 @@ const Products = () => {
                   />
                 </div>
               </div>
-
-              {/* Customer Rating */}
-              <div className="filter-group">
-                <h4>Customer Rating</h4>
-                {[4, 3, 2, 1].map(rating => (
-                  <label key={rating} className="filter-checkbox">
-                    <input
-                      type="radio"
-                      name="rating"
-                      value={rating}
-                      checked={filters.rating === rating.toString()}
-                      onChange={(e) => handleFilterChange('rating', e.target.value)}
-                    />
-                    <span>{rating} Stars & Up</span>
-                  </label>
-                ))}
-              </div>
-
-              {/* Availability */}
-              <div className="filter-group">
-                <h4>Availability</h4>
-                <label className="filter-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={filters.inStock}
-                    onChange={(e) => handleFilterChange('inStock', e.target.checked)}
-                  />
-                  <span>In Stock Only</span>
-                </label>
-              </div>
-
-              {/* Shipping Options */}
-              <div className="filter-group">
-                <h4>Shipping Options</h4>
-                <label className="filter-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={filters.freeShipping}
-                    onChange={(e) => handleFilterChange('freeShipping', e.target.checked)}
-                  />
-                  <span>Free Shipping</span>
-                </label>
-                <label className="filter-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={filters.prime}
-                    onChange={(e) => handleFilterChange('prime', e.target.checked)}
-                  />
-                  <span>Prime Eligible</span>
-                </label>
-              </div>
-
-              {/* Brand - TODO: Implement in backend */}
-              <div className="filter-group">
-                <h4>Brand</h4>
-                <p className="coming-soon">Coming soon</p>
-              </div>
             </aside>
           )}
 
@@ -207,14 +184,30 @@ const Products = () => {
               </div>
             )}
 
-            {/* Pagination - TODO: Implement */}
-            {products.length > 0 && (
+            {/* Pagination */}
+            {totalPages > 1 && (
               <div className="pagination">
-                <button disabled>Previous</button>
-                <button className="active">1</button>
-                <button>2</button>
-                <button>3</button>
-                <button>Next</button>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                >
+                  Previous
+                </button>
+                {getPageNumbers().map(page => (
+                  <button
+                    key={page}
+                    className={currentPage === page ? 'active' : ''}
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>

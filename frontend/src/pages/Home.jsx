@@ -1,13 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import FlashSaleCard from '../components/FlashSaleCard';
+import CountdownTimer from '../components/CountdownTimer';
 import axiosInstance from '../api/axios';
+import {
+  SALE_STATE,
+  getSaleState,
+  flattenSaleProducts,
+  sortSaleProducts,
+} from '../utils/flashSale';
+
+const HOME_FLASH_LIMIT = 4;
 
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [flashSales, setFlashSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -49,9 +60,10 @@ const Home = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [productsRes, categoriesRes] = await Promise.all([
+      const [productsRes, categoriesRes, flashSalesRes] = await Promise.all([
         axiosInstance.get('/store/getAllProduct/'),
         axiosInstance.get('/category/getAllCategory/'),
+        axiosInstance.get('/sale/getActiveSales/'),
       ]);
 
       if (productsRes.data.status === 200) {
@@ -63,12 +75,31 @@ const Home = () => {
       if (categoriesRes.data.status === 200) {
         setCategories(categoriesRes.data.data);
       }
+
+      if (flashSalesRes.data.status === 200) {
+        setFlashSales(flashSalesRes.data.data);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Home par sirf live deals dikhao, sabse badi discount pehle
+  const liveDeals = useMemo(() => {
+    const live = flattenSaleProducts(flashSales).filter(
+      (item) => getSaleState(item) === SALE_STATE.LIVE
+    );
+    return sortSaleProducts(live, 'discount').slice(0, HOME_FLASH_LIMIT);
+  }, [flashSales]);
+
+  const nextEnding = useMemo(() => {
+    if (!liveDeals.length) return null;
+    return [...liveDeals].sort(
+      (a, b) => new Date(a.end_date) - new Date(b.end_date)
+    )[0];
+  }, [liveDeals]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % banners.length);
@@ -133,6 +164,40 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Flash Sales */}
+      {liveDeals.length > 0 && (
+        <section className="flash-sales-section">
+          <div className="container">
+            <div className="flash-home-header">
+              <div className="flash-home-title">
+                <h2>
+                  <Zap size={26} fill="currentColor" /> Flash Sales
+                </h2>
+                <span className="sale-badge">Limited Time Only!</span>
+              </div>
+              <div className="flash-home-actions">
+                {nextEnding && (
+                  <CountdownTimer
+                    targetDate={nextEnding.end_date}
+                    label="Ends in"
+                    size="md"
+                  />
+                )}
+                <Link to="/flash-sales" className="flash-home-link">
+                  View all deals
+                </Link>
+              </div>
+            </div>
+
+            <div className="fs-grid">
+              {liveDeals.map((item) => (
+                <FlashSaleCard key={`${item.saleId}-${item.id}`} item={item} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products */}
       <section className="featured-section">

@@ -187,6 +187,7 @@ const Header = () => {
       <nav className="header-nav">
         <div className="container">
           <ul className="nav-links">
+            <li><Link to="/flash-sales" className="nav-flash">⚡ Flash Sales</Link></li>
             <li><Link to="/deals">Today's Deals</Link></li>
             <li><Link to="/category/electronics">Electronics</Link></li>
             <li><Link to="/category/fashion">Fashion</Link></li>
@@ -203,6 +204,7 @@ const Header = () => {
       {showMobileMenu && (
         <div className="mobile-menu">
           <Link to="/">Home</Link>
+          <Link to="/flash-sales">⚡ Flash Sales</Link>
           <Link to="/deals">Today's Deals</Link>
           <Link to="/orders">Orders</Link>
           <Link to="/wishlist">Wishlist</Link>
