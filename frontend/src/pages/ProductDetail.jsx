@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Star, Heart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import RecentlyViewed from '../components/RecentlyViewed';
 import axiosInstance, { API_BASE_URL } from '../api/axios';
 
 const ProductDetail = () => {
@@ -40,11 +41,24 @@ const ProductDetail = () => {
         const p = response.data.product;
         setProduct(p);
         setGroupedVariations(p.variations || {});
+        trackProductView(p.id);
       }
     } catch (error) {
       console.error('Error fetching product:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Recently viewed mein save karo - sirf logged in users ke liye
+  const trackProductView = async (productId) => {
+    if (!localStorage.getItem('access_token')) return;
+
+    try {
+      await axiosInstance.post('/recent/viewProduct/', { product_id: productId });
+    } catch (error) {
+      // Tracking fail ho to product page pe koi asar nahi hona chahiye
+      console.error('Error tracking product view:', error);
     }
   };
 
@@ -489,6 +503,8 @@ const ProductDetail = () => {
             )}
           </div>
         </section>
+
+        <RecentlyViewed excludeProductId={product.id} />
       </div>
     </div>
   );

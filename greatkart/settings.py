@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'coupons',
     'notifications',
     'flashSale',
+    'recentProduct',
 ]
 
 MIDDLEWARE = [

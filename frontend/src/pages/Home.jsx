@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import FlashSaleCard from '../components/FlashSaleCard';
 import CountdownTimer from '../components/CountdownTimer';
+import RecentlyViewed from '../components/RecentlyViewed';
 import axiosInstance from '../api/axios';
 import {
   SALE_STATE,
@@ -253,6 +254,10 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <div className="container">
+        <RecentlyViewed />
+      </div>
     </div>
   );
 };

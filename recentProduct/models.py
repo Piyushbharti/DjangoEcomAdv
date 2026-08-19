@@ -8,4 +8,4 @@ class RecentProductView(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     viewed_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
