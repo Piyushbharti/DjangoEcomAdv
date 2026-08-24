@@ -4,8 +4,23 @@ from accounts.models import Account
 
 # Create your models here.
 class RecentProductView(models.Model):
-    user_id = models.ForeignKey(Account, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE,
+        related_name='recent_views'
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='recent_views'
+    )
     viewed_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        # Ek user ek product ke liye ek hi row - dobara dekha to viewed_at update hoga
+        unique_together = ('user', 'product')
+        ordering = ['-viewed_at']
+
+    def __str__(self):
+        return f"{self.user.email} viewed {self.product.product_name}"

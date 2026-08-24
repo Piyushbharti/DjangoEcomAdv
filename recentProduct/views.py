@@ -31,7 +31,7 @@ def viewProduct(request):
     product = get_object_or_404(Product, id=product_id)
 
     recent, created = RecentProductView.objects.update_or_create(
-        user_id=user,
+        user=user,
         product=product,
     )
 
@@ -52,7 +52,7 @@ def viewProduct(request):
 @permission_classes([IsAuthenticated])
 def getRecentProducts(request):
     recents = RecentProductView.objects.filter(
-        user_id=request.user
+        user=request.user
     ).select_related('product').order_by('-viewed_at')[:RECENT_LIMIT]
 
     serializer = RecentProductViewSerializer(recents, many=True)
