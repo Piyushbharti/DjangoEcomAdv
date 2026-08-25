@@ -18,7 +18,6 @@ class RecentProductView(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # Ek user ek product ke liye ek hi row - dobara dekha to viewed_at update hoga
         unique_together = ('user', 'product')
         ordering = ['-viewed_at']
 
