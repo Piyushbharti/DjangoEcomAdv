@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Star, Heart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 import RecentlyViewed from '../components/RecentlyViewed';
 import axiosInstance, { API_BASE_URL } from '../api/axios';
 
@@ -16,6 +17,7 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const { addToCart } = useCart();
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const { user } = useAuth();
 
   // Review form state
   const [reviewRating, setReviewRating] = useState(0);
@@ -25,12 +27,13 @@ const ProductDetail = () => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewImage, setReviewImage] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
   const [isNotified, setIsNotified] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
 
   useEffect(() => {
     fetchProduct();
-    fetchReviews();
   }, [slug]);
 
   const fetchProduct = async () => {
@@ -42,6 +45,8 @@ const ProductDetail = () => {
         setProduct(p);
         setGroupedVariations(p.variations || {});
         trackProductView(p.id);
+        // getAllReview needs the product's id, so fetch only once we have it
+        fetchReviews(p.id);
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -62,15 +67,25 @@ const ProductDetail = () => {
     }
   };
 
-  // Fetch all reviews
-  const fetchReviews = async () => {
+  // Fetch this product's reviews — backend now requires login for getAllReview
+  const fetchReviews = async (productId) => {
+    if (!localStorage.getItem('access_token')) {
+      setReviews([]);
+      return;
+    }
+
+    setReviewsLoading(true);
     try {
-      const response = await axiosInstance.get('/review/getAllReview/');
+      const response = await axiosInstance.post('/review/getAllReview/', {
+        product_id: productId,
+      });
       if (response.data.status === 200) {
         setReviews(response.data.data || []);
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -171,13 +186,23 @@ const ProductDetail = () => {
         setReviewTitle('');
         setReviewComment('');
         setReviewImage(null);
+        setAlreadyReviewed(true);
         alert(response.data.message || 'Review submitted!');
         // Refresh reviews
-        fetchReviews();
+        fetchReviews(product.id);
+      } else if (response.data.status === 409) {
+        setAlreadyReviewed(true);
+        alert(response.data.message || 'You have already reviewed this product.');
+      } else {
+        alert(response.data.message || Object.values(response.data.errors || {})[0] || 'Failed to submit review');
       }
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Failed to submit review. Backend not connected yet.');
+      if (error.response?.status === 401) {
+        alert('Please login to write a review.');
+      } else {
+        alert('Failed to submit review. Please try again.');
+      }
     } finally {
       setReviewSubmitting(false);
     }
@@ -413,6 +438,13 @@ const ProductDetail = () => {
           {/* Write Review Form */}
           <div className="write-review">
             <h3>Write a Review</h3>
+            {!user ? (
+              <p className="review-login-prompt">
+                <Link to="/login">Login</Link> to write a review.
+              </p>
+            ) : alreadyReviewed ? (
+              <p className="review-login-prompt">You have already reviewed this product.</p>
+            ) : (
             <form onSubmit={handleSubmitReview}>
 
               {/* Star Rating - Clickable */}
@@ -473,11 +505,18 @@ const ProductDetail = () => {
                 {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
               </button>
             </form>
+            )}
           </div>
 
           {/* Reviews List */}
           <div className="reviews-list">
-            {reviews.length === 0 ? (
+            {!user ? (
+              <p style={{color: '#999', textAlign: 'center', padding: '20px'}}>
+                <Link to="/login">Login</Link> to see customer reviews.
+              </p>
+            ) : reviewsLoading ? (
+              <p style={{color: '#999', textAlign: 'center', padding: '20px'}}>Loading reviews...</p>
+            ) : reviews.length === 0 ? (
               <p style={{color: '#999', textAlign: 'center', padding: '20px'}}>No reviews yet. Be the first to review!</p>
             ) : (
               reviews.map(review => (

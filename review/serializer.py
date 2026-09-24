@@ -6,7 +6,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     # Product ki info bhi response mein chahiye
     product_name = serializers.CharField(source='product.product_name', read_only=True)
     product_slug = serializers.CharField(source='product.slug', read_only=True)
-
+    
     class Meta:
         model = ReviewModal
         fields = [

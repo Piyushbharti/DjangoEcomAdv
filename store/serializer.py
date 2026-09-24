@@ -21,6 +21,8 @@ class ProductWithVariationsSerializer(serializers.ModelSerializer):
     variations = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.category_name', read_only=True)
     category_slug = serializers.CharField(source='category.slug', read_only=True)
+    rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -38,7 +40,15 @@ class ProductWithVariationsSerializer(serializers.ModelSerializer):
             'category_name',
             'category_slug',
             'variations',
+            'rating',
+            'review_count',
         ]
+
+    def get_rating(self, obj):
+        return round(obj.get_avgRating(), 1)
+
+    def get_review_count(self, obj):
+        return obj.reviews.count()
 
     def get_variations(self, obj):
         """Return variations grouped by category using the manager"""

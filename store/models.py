@@ -1,6 +1,6 @@
 from django.db import models
+from django.db.models import Avg
 from category.models import Category
-
 
 class Product(models.Model):
     product_name = models.CharField(max_length=200, unique=True)
@@ -24,6 +24,9 @@ class Product(models.Model):
     def get_active_variations(self):
         """Get all active variations grouped by category"""
         return self.variations.filter(is_active=True)
+
+    def get_avgRating(self):
+        return self.reviews.aggregate(avg=Avg('rating'))['avg'] or 0
 
     def has_variation(self, category):
         """Check if product has a specific variation category"""
