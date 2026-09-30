@@ -7,7 +7,7 @@ from category.models import Category
 from orders.models import OrderItem
 from .serializer import ProductSerializer, ProductWithVariationsSerializer, VariationSerializer
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Avg
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count
 from django.core.mail import send_mail
@@ -101,10 +101,11 @@ def getAllProductByPagination(request):
 @api_view(['GET'])
 def searchProduct(request):
     search = request.GET.get('search')
+    rating = request.GET.get('rating')
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
     sortBy = request.GET.get('sortBy')
-    products = Product.objects.all()
+    products = Product.objects.annotate(avg_rating=Avg('reviews__rating'))
 
     if search:
         products = products.filter(
@@ -114,7 +115,8 @@ def searchProduct(request):
         products = products.filter(price__gte=min_price)
     if max_price:
         products = products.filter(price__lte=max_price)
-
+    if rating:
+        products = products.filter(avg_rating__gte=rating)
     # Sorting
     if sortBy == 'price_low':
         products = products.order_by('price')
@@ -124,6 +126,8 @@ def searchProduct(request):
         products = products.order_by('-created_date')
     elif sortBy == 'oldest':
         products = products.order_by('created_date')
+    elif sortBy == 'rating_high':
+        products = products.order_by('-avg_rating')
     else:
         products = products.order_by('-created_date')
 
@@ -191,3 +195,14 @@ def updateStock(request, product_id):
         for toNotify in allNotifyStockUpdate:
             _send_stock_update(toNotify)
     return Response({'Message': 'Notification send!'})
+
+
+@api_view(['GET'])
+def filter(request, product_id):
+    products = Product.objects.prefetch_related('reviews')
+    for product in products:
+        print(list(product.reviews.all().values()))
+
+    # serializer = ProductSerializer(product, many=True)
+    # print(serializer, "check")
+    # return Response({'Message': serializer.data})

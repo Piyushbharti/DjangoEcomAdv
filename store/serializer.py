@@ -11,10 +11,12 @@ class VariationSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     category_slug = serializers.CharField(source='category.slug', read_only=True)
-
+    review = serializers.SerializerMethodField()
     class Meta:
         model = Product
         fields = "__all__"
+    def get_review(self, obj):
+        return obj.get_rating()
 
 
 class ProductWithVariationsSerializer(serializers.ModelSerializer):

@@ -18,7 +18,7 @@ class Product(models.Model):
     class Meta:
         ordering = ['-created_date']
 
-    def __str__(self):
+    def __str__(self):  
         return self.product_name
 
     def get_active_variations(self):
